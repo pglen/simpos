@@ -44,21 +44,21 @@ dd if=/dev/zero of=null.bin count=8 bs=1 > /dev/null 2>&1
 cd ..
 
 build_dir "src/Pure64" || exit 1
-build_dir "src/BareMetal" || exit 1
-build_dir "src/BareMetal-Monitor" || exit 1
-build_dir "src/BareMetal-Demo" || exit 1
 build_dir "src/BMFS" || exit 1
+build_dir "src/os-code" || exit 1
+build_dir "src/mon-code" || exit 1
+build_dir "src/app-code" || exit 1
 
 update_file "src/Pure64/bin/mbr.sys" "${OUTPUT_DIR}/mbr.sys"
 update_file "src/Pure64/bin/multiboot.sys" "${OUTPUT_DIR}/multiboot.sys"
 update_file "src/Pure64/bin/multiboot2.sys" "${OUTPUT_DIR}/multiboot2.sys"
 update_file "src/Pure64/bin/pure64.sys" "${OUTPUT_DIR}/pure64.sys"
 update_file "src/Pure64/bin/pxestart.sys" "${OUTPUT_DIR}/pxestart.sys"
-update_file "src/BareMetal/bin/kernel.sys" "${OUTPUT_DIR}/kernel.sys"
-update_file "src/BareMetal/bin/kernel-debug.txt" "${OUTPUT_DIR}/kernel-debug.txt"
-copy_file "src/BareMetal-Monitor/bin/monitor.bin" "${OUTPUT_DIR}/monitor.bin"
-copy_file "src/BareMetal-Monitor/bin/monitor-debug.txt" "${OUTPUT_DIR}/monitor-debug.txt"
+update_file "src/os-code/bin/kernel.sys" "${OUTPUT_DIR}/kernel.sys"
+update_file "src/os-code/bin/kernel-debug.txt" "${OUTPUT_DIR}/kernel-debug.txt"
 update_file "src/BMFS/bin/bmfs" "${OUTPUT_DIR}/bmfs"
+copy_file   "src/mon-code/bin/monitor.bin" "${OUTPUT_DIR}/monitor.bin"
+copy_file   "src/mon-code/bin/monitor-debug.txt" "${OUTPUT_DIR}/monitor-debug.txt"
 
 cd sys
 ./bmfs disk.img format
