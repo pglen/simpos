@@ -1,18 +1,26 @@
 #!/bin/sh
 
+saveapp() {
+
+./bmfs disk.img create $1 2
+./bmfs disk.img write $1
+
+}
+
 cd src/app-code/bin
 cp *.app ../../../sys/
 cd ../../../sys/
-./bmfs disk.img create hello.app 2
-./bmfs disk.img write hello.app
-./bmfs disk.img create sysinfo.app 2
-./bmfs disk.img write sysinfo.app
-./bmfs disk.img create counter.app 2
-./bmfs disk.img write counter.app
-./bmfs disk.img create helloc.app 2
-./bmfs disk.img write helloc.app
-./bmfs disk.img create gavare.app 2
-./bmfs disk.img write gavare.app
-./bmfs disk.img create graphics.app 2
-./bmfs disk.img write graphics.app
 
+saveapp hello.app
+saveapp sysinfo.app
+saveapp counter.app
+saveapp helloc.app
+saveapp gavare.app
+saveapp graphics.app
+
+saveapp helloc2.app
+saveapp helloc3.app
+saveapp helloc4.app
+saveapp helloc5.app
+
+# EOF

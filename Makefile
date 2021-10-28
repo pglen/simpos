@@ -9,7 +9,6 @@ AUTOCHECK=autocheck
 endif
 
 git:
-	#rm -f sys/disk.img
 	git add .
 	git commit -m "$(AUTOCHECK)"
 	git push
@@ -17,8 +16,15 @@ git:
 build:
 	./sh/build.sh
 
-run:
+run:  build
 	./sh/run.sh
 
 clean:
 	./sh/clean.sh
+
+iso:
+	cd sys;	../sh/mkiso.sh
+
+runiso:
+	./sh/runiso.sh
+
