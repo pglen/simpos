@@ -53,3 +53,6 @@ dkms.conf
 
 # System dir
 /sys/*
+*.iso
+*.img
+
