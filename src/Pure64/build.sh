@@ -8,6 +8,7 @@ nasm pure64.asm -o ../bin/pure64.sys
 
 cd bootsectors
 
+nasm isombr.asm -o ../../bin/isombr.sys
 nasm mbr.asm -o ../../bin/mbr.sys
 nasm pxestart.asm -o ../../bin/pxestart.sys
 nasm multiboot.asm -o ../../bin/multiboot.sys

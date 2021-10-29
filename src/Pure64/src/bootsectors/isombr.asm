@@ -142,7 +142,7 @@ wait_disp:
     mov esi, 0x7C00+512
     mov edi, 0x8000
     mov ecx, 4096+8192+4096
-    rep movsb
+    ;rep movsb
 
 	; Verify that the 2nd stage boot loader was read.
 	mov ax, [0x8000+6]
@@ -152,7 +152,7 @@ wait_disp:
 	mov si, msg_OK
 	call print_string_16
 
-    ;jmp  halt                  ; test skip mode set
+    jmp  halt                  ; test skip mode set
 
 	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				           ; No more interrupts
