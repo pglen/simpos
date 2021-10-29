@@ -37,6 +37,7 @@ function copy_file {
 mkdir -p sys
 mkdir -p src/mon-code/bin
 mkdir -p src/app-code/bin
+mkdir -p src/os-code/bin
 
 echo Creating disk image...
 cd sys
@@ -50,6 +51,7 @@ build_dir "src/os-code" || exit 1
 build_dir "src/mon-code" || exit 1
 build_dir "src/app-code" || exit 1
 
+update_file "src/Pure64/bin/isombr.sys" "${OUTPUT_DIR}/isombr.sys"
 update_file "src/Pure64/bin/mbr.sys" "${OUTPUT_DIR}/mbr.sys"
 update_file "src/Pure64/bin/multiboot.sys" "${OUTPUT_DIR}/multiboot.sys"
 update_file "src/Pure64/bin/multiboot2.sys" "${OUTPUT_DIR}/multiboot2.sys"

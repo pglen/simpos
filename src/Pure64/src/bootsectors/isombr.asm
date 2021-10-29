@@ -37,6 +37,10 @@ entry:
 	mov dx, 0			; Serial port 0
 	int 0x14			; Configure serial port
 
+	mov si, msg_Init
+	call print_string_16
+
+
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
 ; inputs: es:di -> destination buffer for 24 byte entries
@@ -89,6 +93,9 @@ memmapend:
 	mov ecx, 8
 	rep stosd
 
+    mov si, msg_OK
+	call print_string_16
+
 ; Enable the A20 gate
 set_A20:
 	in al, 0x64
@@ -105,6 +112,16 @@ check_A20:
 
 	mov si, msg_Load
 	call print_string_16
+
+wait_for_user:
+    mov  cx, 0x5ff
+  wait_some:
+    push cx
+    mov cx, 0xffff
+  inner:
+    loop inner
+    pop  cx
+    loop wait_some
 
 	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
 	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
@@ -139,10 +156,10 @@ wait_disp:
 	;jc read_fail
 
     ; ON ISO copy it to 0x8000
-    mov esi, 0x7C00+512
-    mov edi, 0x8000
-    mov ecx, 4096+8192+4096
-    ;rep movsb
+    mov si, 0x7C00+512
+    mov di, 0x8000
+    mov cx, 4096+8192+4096
+    rep movsb
 
 	; Verify that the 2nd stage boot loader was read.
 	mov ax, [0x8000+6]
@@ -152,7 +169,7 @@ wait_disp:
 	mov si, msg_OK
 	call print_string_16
 
-    jmp  halt                  ; test skip mode set
+    ;jmp  halt                  ; test skip mode set
 
 	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				           ; No more interrupts
@@ -180,13 +197,13 @@ halt:
 ; IN:	SI - Address of start of string
 print_string_16:			; Output string in SI to screen
 	pusha
-	mov dx, 0			; Port 0
+	mov dx, 0	          ; Port 0
  .repeat:
-	mov ah, 0x01			; Serial - Write character to port
-	lodsb				; Get char from string
+	mov ah, 0x01	      ; Serial - Write character to port
+	lodsb				  ; Get char from string
 	cmp al, 0
-	je .done			; If char is zero, end of string
-	int 0x14			; Output the character
+	je .done			  ; If char is zero, end of string
+	int 0x14			  ; Output the character
 	jmp short .repeat
  .done:
 	popa
@@ -205,10 +222,11 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
-msg_Load db 10, "ISO MBR ", 0
+msg_Init db "Boot ", 0
+msg_Load db "MBR ", 0
 msg_OK db "OK", 10, 0
-msg_SigFail db "- Bad Sig!", 0
-msg_ReadFail db "Failed to read drive!", 0
+msg_SigFail db  "Sig Err", 0
+msg_ReadFail db "Read Err", 0
 
 times 446-$+$$ db 0
 

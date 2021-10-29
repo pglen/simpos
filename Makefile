@@ -25,6 +25,9 @@ clean:
 isobuild:
 	./sh/mkiso.sh
 
+isorun:
+	./sh/runiso.sh
+
 runiso:
 	./sh/runiso.sh
 

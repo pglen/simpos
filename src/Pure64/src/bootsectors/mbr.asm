@@ -38,6 +38,9 @@ entry:
 	mov dx, 0			; Serial port 0
 	int 0x14			; Configure serial port
 
+	mov si, msg_Init
+	call print_string_16
+
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
 ; inputs: es:di -> destination buffer for 24 byte entries
@@ -90,6 +93,9 @@ memmapend:
 	mov ecx, 8
 	rep stosd
 
+	mov si, msg_OK
+	call print_string_16
+
 ; Enable the A20 gate
 set_A20:
 	in al, 0x64
@@ -106,6 +112,16 @@ check_A20:
 
 	mov si, msg_Load
 	call print_string_16
+
+wait_for_user:
+    mov  cx, 0x3ff
+  wait_some:
+    push cx
+    mov cx, 0xffff
+  inner:
+    loop inner
+    pop  cx
+    loop wait_some
 
 	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
 	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
@@ -195,6 +211,7 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
+msg_Init db 10, "Boot ", 0
 msg_Load db 10, "MBR ", 0
 msg_OK db "OK", 0
 msg_SigFail db "- Bad Sig!", 0

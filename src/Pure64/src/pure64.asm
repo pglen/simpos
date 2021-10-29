@@ -72,6 +72,30 @@ start32:
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
 
+; Configure serial port @ 0x03F8
+
+	mov dx, 0x03F8 + 1		; Interrupt Enable
+	mov al, 0x00			; Disable all interrupts
+	out dx, al
+	mov dx, 0x03F8 + 3		; Line Control
+	mov al, 80
+	out dx, al
+	mov dx, 0x03F8 + 0		; Divisor Latch
+	mov ax, 1			    ; 1 = 115200 baud
+	out dx, ax
+	mov dx, 0x03F8 + 3		; Line Control
+	mov al, 3			    ; 8 bits, no parity, one stop bit
+	out dx, al
+	mov dx, 0x03F8 + 4		; Modem Control
+	mov al, 3
+	out dx, al
+	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
+	mov dx, 0x03F8 + 2
+	out dx, al
+
+    mov si, message32		; Location of message
+    call serial_out
+
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
 ; http://www.nondot.org/sabre/os/files/MiscHW/RealtimeClockFAQ.txt
@@ -114,26 +138,6 @@ rtc_poll:
 	mov al, 0xFF
 	out 0x21, al
 	out 0xA1, al
-
-; Configure serial port @ 0x03F8
-	mov dx, 0x03F8 + 1		; Interrupt Enable
-	mov al, 0x00			; Disable all interrupts
-	out dx, al
-	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 80
-	out dx, al
-	mov dx, 0x03F8 + 0		; Divisor Latch
-	mov ax, 1			; 1 = 115200 baud
-	out dx, ax
-	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 3			; 8 bits, no parity, one stop bit
-	out dx, al
-	mov dx, 0x03F8 + 4		; Modem Control
-	mov al, 3
-	out dx, al
-	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
-	mov dx, 0x03F8 + 2
-	out dx, al
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
 	mov ecx, 5120
@@ -264,6 +268,10 @@ clearcs64:
 	xor eax, eax
 
 	lgdt [GDTR64]			; Reload the GDT
+
+    mov rsi, message64		; Location of message
+	mov cx, 11			; Length of message
+    call serial_out
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -513,18 +521,30 @@ nextIOAPIC:
 	mov ecx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
 
+    mov rsi, message		; Location of message
     call serial_out
+
     jmp done_maps
+
+; -----------------------------------------------------------------------------
+; serial_out  -- Content description
+;
+;  IN:  RSI = starting address of string
+;
+; OUT:	Nothing
+;
+; Date/Time: Fri 29.Oct.2021 12:01:44
+; -----------------------------------------------------------------------------
 
 serial_out:
 
 ; Output message via serial port
 	cld				; Clear the direction flag.. we want to increment through the string
 	mov dx, 0x03F8			; Address of first serial port
-	mov rsi, message		; Location of message
-	mov cx, 11			; Length of message
+	;mov rsi, message		; Location of message
+	;mov cx, 11			; Length of message
  serial_nextchar:
-	jrcxz serial_done		; If RCX is 0 then the function is complete
+	;jrcxz serial_done		; If RCX is 0 then the function is complete
 	add dx, 5			; Offset to Line Status Register
 	in al, dx
 	sub dx, 5			; Back to to base
@@ -534,7 +554,10 @@ serial_out:
 	dec cx
 	lodsb				; Get char from string and store in AL
 	out dx, al			; Send the char to the serial port
-	jmp serial_nextchar
+    cmp al, 0
+	jne serial_nextchar
+	;jmp serial_nextchar
+
  serial_done:
     ret
 
@@ -557,7 +580,6 @@ serial_out:
 	xor r14, r14
 	xor r15, r15
 	jmp 0x00100000
-
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"

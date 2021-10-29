@@ -5,7 +5,9 @@
 ; System Variables
 ; =============================================================================
 
-message: db 10, 'Pure64 OK', 10
+message32:  db      10, 'In 32 OK', 10, 0           ; new line comes first
+message64:  db          'In 64 OK', 10, 0
+message:    db          'Pure64 OK', 10, 0
 
 ;CONFIG
 cfg_smpinit:		db 1	; By default SMP is enabled. Set to 0 to disable.
