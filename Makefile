@@ -22,8 +22,8 @@ run:  build
 clean:
 	./sh/clean.sh
 
-iso:
-	cd sys;	../sh/mkiso.sh
+isobuild:
+	./sh/mkiso.sh
 
 runiso:
 	./sh/runiso.sh
