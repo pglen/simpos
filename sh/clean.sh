@@ -9,8 +9,9 @@ clean_dir()  {
 }
 
 clean_dir "src/Pure64"
-clean_dir "src/BareMetal"
-clean_dir "src/BareMetal-Monitor"
+clean_dir "src/os-code"
+clean_dir "src/mon-code"
+clean_dir "src/app-code"
 clean_dir "src/BMFS"
 
 rm -rf sys

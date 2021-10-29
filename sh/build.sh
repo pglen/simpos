@@ -35,7 +35,8 @@ function copy_file {
 }
 
 mkdir -p sys
-mkdir -p src/BareMetal-Monitor/bin
+mkdir -p src/mon-code/bin
+mkdir -p src/app-code/bin
 
 echo Creating disk image...
 cd sys
