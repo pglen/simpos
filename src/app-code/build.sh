@@ -2,21 +2,21 @@
 
 cd src
 
-nasm -I../../os-code/ hello.asm -o ../bin/hello.app -l ../bin/hello-debug.txt
-nasm -I../../os-code/ sysinfo.asm -o ../bin/sysinfo.app -l ../bin/sysinfo-debug.txt
-nasm -I../../os-code/ counter.asm -o ../bin/counter.app
+nasm -I../../common/ hello.asm -o ../bin/hello.app -l ../bin/hello-debug.txt
+nasm -I../../common/ sysinfo.asm -o ../bin/sysinfo.app -l ../bin/sysinfo-debug.txt
+nasm -I../../common/ counter.asm -o ../bin/counter.app
 
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc.o helloc.c
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o graphics.o graphics.c
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o gavare.o gavare.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc.o helloc.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o graphics.o graphics.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o gavare.o gavare.c
 
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc2.o hello2.c
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc3.o hello3.c
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc4.o hello4.c
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc5.o hello5.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc2.o hello2.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc3.o hello3.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc4.o hello4.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o helloc5.o hello5.c
 
-gcc -I../../os-code/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o libBareMetal.o \
-                    ../../os-code/api/libBareMetal.c
+gcc -I../../common/ -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o libBareMetal.o \
+                    ../../common/libsimpos.c
 
 ld -T c.ld -o ../bin/helloc.app helloc.o libBareMetal.o
 ld -T c.ld -o ../bin/helloc2.app helloc2.o libBareMetal.o

@@ -7,14 +7,14 @@
 [BITS 64]
 [ORG 0x0000000000200000]
 
-%INCLUDE "api/libBareMetal.asm"
+%INCLUDE "libsimpos.inc"
 
 start:					; Start of program label
 
 	mov rsi, hello_message		 ; Load RSI with memory address of string
 	mov rcx, 14			         ; Output 14 characters
-	call [b_output]			     ; Print the string that RSI points to
-    call [b_dummy]
+	call [sys_output]			     ; Print the string that RSI points to
+    call [sys_dummy]
 
 ret					; Return to OS
 

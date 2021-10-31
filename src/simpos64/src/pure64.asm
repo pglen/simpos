@@ -516,8 +516,8 @@ nextIOAPIC:
 	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
 	stosb
 
-    mov rsi, messageI		; Location of message
-    call serial_out
+    ;mov rsi, messageI		; Location of message
+    ;call serial_out
 
 ; Move the trailing binary to its final location
 	mov esi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
@@ -567,8 +567,8 @@ serial_out:
 
 done_maps:
 
-    mov rsi, messageK		; Location of message
-    call serial_out
+    ;mov rsi, messageK		; Location of message
+    ;call serial_out
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers

@@ -7,7 +7,7 @@
 [BITS 64]
 [ORG 0x0000000000200000]
 
-%INCLUDE "api/libBareMetal.asm"
+%include "libsimpos.inc"
 
 start:				; Start of program label
 
@@ -219,7 +219,7 @@ output:
 	push rcx
 
 	call string_length	; Calculate the string length
-	call [b_output]		; Output the string via the kernel syscall
+	call [sys_output]		; Output the string via the kernel syscall
 
 	pop rcx
 	ret

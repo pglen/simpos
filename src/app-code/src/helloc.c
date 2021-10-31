@@ -4,7 +4,7 @@
 // gcc -c -m64 -nostdlib -nostartfiles -nodefaultlibs -o libBareMetal.o libBareMetal.c
 // ld -T c.ld -o helloc.app helloc.o libBareMetal.o
 
-#include "api/libBareMetal.h"
+#include "libsimpos.h"
 
 static void callb();
 static int strlen2(const char* str);
