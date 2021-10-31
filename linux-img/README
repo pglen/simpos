@@ -1,0 +1,31 @@
+Tiny Linux 2.2.14 hard disk image
+Sat Apr  2 14:14:10 CEST 2005
+Volker Ruppert <info@vruppert.de>
+
+This directory contains a bootable 4-meg hard disk image and a .bochsrc file.
+To start up Linux, you should be able to simply cd into this directory and
+run bochs.
+
+The bootable disk image was created using the following method:
+1. make 4-meg empty file using dd if=/dev/zero...
+2. run mke2fs to create a filesystem
+3. mount the filesystem using loopback
+4. copy contents of a redhat rescue disk into empty filesystem, and
+   copy a kernel into /boot.  unmount.
+5. boot bochs once using a LILO floppy, root=/dev/hda.
+6. within bochs, set up lilo.conf to make /dev/hda bootable, run lilo to
+   make the hard disk image bootable
+7. now boot hard disk image, floppy no longer needed.
+
+If it is working, you will see "LILO boot:" followed by boot messages.
+At the end, you see:
+
+    This is the Red Hat rescue disk. Most of the basic system commands are 
+    in /bin.
+
+    Type exit to halt the system.
+
+    # _
+
+Poke around a bit to test it.  I'll include more diagnostics some day.
+When you're done, type "exit" and then turn off the power.

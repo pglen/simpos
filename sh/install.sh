@@ -2,6 +2,7 @@
 
 set -e
 
+export EXEC_DIR="$PWD"
 export OUTPUT_DIR="$PWD/sys"
 
 cd "$OUTPUT_DIR"
@@ -15,4 +16,5 @@ fi
 
 dd if=mbr.sys of=disk.img conv=notrunc > /dev/null 2>&1
 dd if=software.sys of=disk.img bs=512 seek=16 conv=notrunc > /dev/null 2>&1
-cd ..
+
+cd $EXEC_DIR

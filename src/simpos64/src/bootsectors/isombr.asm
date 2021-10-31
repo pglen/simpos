@@ -11,22 +11,24 @@
 ; =============================================================================
 
 ; Default location of the second stage boot loader. This loads
-; 32 KiB from sector 16 into memory at 0x8000
+; 32 KiB from sector 16 into memory at 0xe000
+
 %define DAP_SECTORS 64
 %define DAP_STARTSECTOR 16
-%define DAP_ADDRESS 0x8000
+%define DAP_ADDRESS 0xe000
 %define DAP_SEGMENT 0x0000
 
 BITS 16
 org 0x7C00
 
 entry:
-	cli				; Disable interrupts
-	cld				; Clear direction flag
-	xor eax, eax
+	cli				    ; Disable interrupts
+	cld				    ; Clear direction flag
+	xor ax, ax
 	mov ss, ax
 	mov es, ax
 	mov ds, ax
+	;mov cs, ax         ;??
 	mov sp, 0x7C00
 	sti				; Enable interrupts
 
@@ -93,7 +95,7 @@ memmapend:
 	mov ecx, 8
 	rep stosd
 
-    mov si, msg_OK
+	mov si, msg_Init2
 	call print_string_16
 
 ; Enable the A20 gate
@@ -110,18 +112,18 @@ check_A20:
 	mov al, 0xDF
 	out 0x60, al
 
-	mov si, msg_Load
+	mov si, msg_Init3
 	call print_string_16
 
-wait_for_user:
-    mov  cx, 0x5ff
-  wait_some:
-    push cx
-    mov cx, 0xffff
-  inner:
-    loop inner
-    pop  cx
-    loop wait_some
+;wait_for_user:
+;    mov  cx, 0x5ff
+;  wait_some:
+;    push cx
+;    mov cx, 0xffff
+;  inner:
+;    loop inner
+;    pop  cx
+;    loop wait_some
 
 	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
 	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
@@ -143,11 +145,19 @@ wait_for_user:
 	mov ax, 0x4F02			; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
 	int 0x10
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and successful
-	jne halt
+	je  wait_disp
+
+	mov si, msg_ERR
+	call print_string_16
+    jmp halt
 
 wait_disp:
     hlt                         ; this was needed for the display to settle
 
+	mov si, msg_OK
+	call print_string_16
+
+    ;jmp halt
 	; Read the 2nd stage boot loader into memory.
 	;mov ah, 0x42			; Extended Read
 	;mov dl, [DriveNumber]		; http://www.ctyme.com/intr/rb-0708.htm
@@ -155,21 +165,34 @@ wait_disp:
 	;int 0x13
 	;jc read_fail
 
-    ; ON ISO copy it to 0x8000
-    mov si, 0x7C00+512
-    mov di, 0x8000
-    mov cx, 4096+8192+4096
+copy_to_e000:
+    ; ON ISO copy it to 0x9000
+    cld
+    mov si, 0x7C00+0x200
+    mov di, 0xe000
+    mov cx, 4096+8192 ;+4096+8192
     rep movsb
 
-	; Verify that the 2nd stage boot loader was read.
-	mov ax, [0x8000+6]
-	cmp ax, 0x3436			; Match against the Pure64 binary
+	;mov ax, [0x7C00+512 - 2]
+	;cmp ax, 0xaa55			; Match against the loader
+	;jne sig_fail
+
+    ; Verify that the 2nd stage boot loader was read.
+	;mov ax, [0xe000+6]
+	;cmp ax, 0x3436			; Match against the Pure64 binary beginning
+	;jne sig_fail
+
+    mov al, [0xe000+4096 - 2]
+	cmp al, 0x90			; Match against the Pure64 binary end
 	jne sig_fail
 
-	mov si, msg_OK
+    mov si, msg_Prot
 	call print_string_16
 
-    ;jmp  halt                  ; test skip mode set
+msg:
+	mov si, msg_OK
+	call print_string_16
+    ;jmp  msg                  ; test skip mode set
 
 	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				           ; No more interrupts
@@ -177,7 +200,17 @@ wait_disp:
 	mov eax, cr0
 	or al, 0x01			     ; Set protected mode bit
 	mov cr0, eax
-	jmp 8:0x8000			 ; Jump to 32-bit protected mode
+
+ ;   jmp  no_prefetch
+ ;   nop
+ ;   nop
+ ;no_prefetch:
+
+align 16
+;BITS 32
+	jmp 8:0xe000			 ; Jump to 32-bit protected mode
+
+;BITS 16
 
 read_fail:
 	mov si, msg_ReadFail
@@ -222,13 +255,21 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
-msg_Init db "Boot ", 0
-msg_Load db "MBR ", 0
-msg_OK db "OK", 10, 0
-msg_SigFail db  "Sig Err", 0
-msg_ReadFail db "Read Err", 0
+msg_Init      db "M", 0
+msg_Init2     db "B", 0
+msg_Init3     db "R", 0
+msg_ERR       db  "DisErr", 10, 0
+msg_Prot      db  "Prot", 0
+msg_OK        db  " OK", 10, 0
+msg_SigFail   db  "SigErr", 0
+msg_ReadFail  db  "RdErr", 0
 
+padd:
 times 446-$+$$ db 0
+endd:
+
+;%assign num endd-padd
+;%warning "padding available" num
 
 ; False partition table entry required by some BIOS vendors.
 db 0x80, 0x00, 0x01, 0x00, 0xEB, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF

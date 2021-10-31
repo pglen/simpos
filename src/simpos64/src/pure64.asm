@@ -4,7 +4,7 @@
 ;
 ; The first stage loader is required to gather information about the system
 ; while the BIOS or UEFI is still available and load the Pure64 binary to
-; 0x00008000. Setup a minimal 64-bit environment, copy the 64-bit kernel from
+; 0x0000xx00. Setup a minimal 64-bit environment, copy the 64-bit kernel from
 ; the end of the Pure64 binary to the 1MiB memory mark and jump to it!
 ;
 ; Pure64 requires a payload for execution! The stand-alone pure64.sys file
@@ -16,16 +16,18 @@
 ; Max size of the resulting pure64.sys is 32768 bytes (32KiB)
 ; =============================================================================
 
+%include "../../common/common.inc"
+
 BITS 32
 
 ORG 0x8000
 
-PURE64SIZE equ 4096			; Pad Pure64 to this length
+PURE64SIZE equ 4096			     ; Pad Pure64 to this length
 
 start:
-	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
+	jmp start32			     ; This command will be overwritten with 'NOP's before the AP's are started
 	nop
-	db 0x36, 0x34			; '64' marker
+	db 0x36, 0x34			 ; '64' marker
 
 ; =============================================================================
 ; Code for AP startup
@@ -51,6 +53,7 @@ BITS 16
 ; 32-bit mode
 BITS 32
 start32:
+
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
@@ -72,28 +75,27 @@ start32:
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
 
-; Configure serial port @ 0x03F8
+; Configure serial port @ 0x03F8 (boot sector already done this)
+	;mov dx, 0x03F8 + 1		; Interrupt Enable
+	;mov al, 0x00			; Disable all interrupts
+	;out dx, al
+	;mov dx, 0x03F8 + 3		; Line Control
+	;mov al, 80
+	;out dx, al
+	;mov dx, 0x03F8 + 0		; Divisor Latch
+	;mov ax, 1			    ; 1 = 115200 baud
+	;out dx, ax
+	;mov dx, 0x03F8 + 3		; Line Control
+	;mov al, 3			    ; 8 bits, no parity, one stop bit
+	;out dx, al
+	;mov dx, 0x03F8 + 4		; Modem Control
+	;mov al, 3
+	;out dx, al
+	;mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
+	;mov dx, 0x03F8 + 2
+	;out dx, al
 
-	mov dx, 0x03F8 + 1		; Interrupt Enable
-	mov al, 0x00			; Disable all interrupts
-	out dx, al
-	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 80
-	out dx, al
-	mov dx, 0x03F8 + 0		; Divisor Latch
-	mov ax, 1			    ; 1 = 115200 baud
-	out dx, ax
-	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 3			    ; 8 bits, no parity, one stop bit
-	out dx, al
-	mov dx, 0x03F8 + 4		; Modem Control
-	mov al, 3
-	out dx, al
-	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
-	mov dx, 0x03F8 + 2
-	out dx, al
-
-    mov si, message32		; Location of message
+    mov esi, message32
     call serial_out
 
 ; Set up RTC
@@ -270,14 +272,13 @@ clearcs64:
 	lgdt [GDTR64]			; Reload the GDT
 
     mov rsi, message64		; Location of message
-	mov cx, 11			; Length of message
     call serial_out
 
-; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
+    ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
-	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
+	stosd				    ; Write 8 bytes in total to overwrite the 'far jump' and marker
 
 ; Process the E820 memory map to find all possible 2MiB pages that are free to use
 ; Build a map at 0x400000
@@ -515,9 +516,12 @@ nextIOAPIC:
 	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
 	stosb
 
+    mov rsi, messageI		; Location of message
+    call serial_out
+
 ; Move the trailing binary to its final location
 	mov esi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
-	mov edi, 0x100000		; Destination address at the 1MiB mark
+	mov edi, 0x100000		    ; Destination address at the 1MiB mark
 	mov ecx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
 
@@ -561,7 +565,10 @@ serial_out:
  serial_done:
     ret
 
- done_maps:
+done_maps:
+
+    mov rsi, messageK		; Location of message
+    call serial_out
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
@@ -590,9 +597,14 @@ serial_out:
 
 EOF:	db 0xDE, 0xAD, 0xC0, 0xDE
 
+padd:
 ; Pad to an even KB file
 times PURE64SIZE-($-$$) db 0x90
 
+endd:
+
+;%assign num endd-padd
+;%warning "padding available" num
 
 ; =============================================================================
 ; EOF

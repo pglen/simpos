@@ -8,7 +8,7 @@ clean_dir()  {
     cd $XWD
 }
 
-clean_dir "src/Pure64"
+clean_dir "src/simpos64"
 clean_dir "src/os-code"
 clean_dir "src/mon-code"
 clean_dir "src/app-code"

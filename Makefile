@@ -1,7 +1,7 @@
 # Makefile for the SIMPOS project
 
 all:
-	echo Targets: build git run clean
+	echo Targets: build git run clean isobuild isorun
 
 # Auto Checkin
 ifeq ("$(AUTOCHECK)","")
@@ -22,10 +22,10 @@ run:  build
 clean:
 	./sh/clean.sh
 
-isobuild:
+isobuild:  build
 	./sh/mkiso.sh
 
-isorun:
+isorun:  isobuild
 	./sh/runiso.sh
 
 runiso:

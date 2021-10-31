@@ -1,15 +1,17 @@
 #!/bin/sh
 
+export EXEC_DIR="$PWD"
+export OUTPUT_DIR="$EXEC_DIR/sys"
+
+echo Copying apps ...
+
 saveapp() {
-
-./bmfs disk.img create $1 2
-./bmfs disk.img write $1
-
+    ../src/BMFS/bin/bmfs disk.img create $1 2
+    ../src/BMFS/bin/bmfs disk.img write $1
 }
 
-cd src/app-code/bin
-cp *.app ../../../sys/
-cd ../../../sys/
+cd $OUTPUT_DIR
+cp ../src/app-code/bin/*.app .
 
 saveapp hello.app
 saveapp sysinfo.app
@@ -22,5 +24,7 @@ saveapp helloc2.app
 saveapp helloc3.app
 saveapp helloc4.app
 saveapp helloc5.app
+
+cd $EXEC_DIR
 
 # EOF

@@ -15,4 +15,7 @@ fi
 
 #dd if=mbr.sys of=disk.img conv=notrunc > /dev/null 2>&1
 dd if=software.sys of=isodisk.img bs=512 conv=notrunc > /dev/null 2>&1
-cd ..
+
+#cd ..
+cd $EXEC_DIR
+

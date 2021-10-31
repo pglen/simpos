@@ -1,11 +1,12 @@
 #!/bin/bash
 
 if [ $# -lt 2 ] ; then
-    echo "Usage: cmpdate.sh [-v] reffile newfile [ newfile2 ...] "
+    echo "Usage: cmpdate.sh [-v] targetfile srcfile [ srcfile2 ...] "
+    echo "Setting exit code based on file date relation"
     exit 0
 fi
 
-# The One option
+# Option to show the test if files are earliew
 VERB=0
 if [ $1 == "-v" ] ; then
     shift
@@ -29,10 +30,10 @@ do
     else
         SSS=0
     fi
-    #echo $FFF $SSS
+    echo $FFF $SSS
 
     # Check date
-    if [ $FFF -gt $SSS ] ; then
+    if [ $FFF -lt $SSS ] ; then
         if [ $VERB -ne 0 ] ; then
             echo "Later   " $ORG - $var
         fi
@@ -44,5 +45,10 @@ do
         # No change
     fi
 done
+
+if [ $VERB -ne 0 ] ; then
+    echo "Ret Code " $RET
+fi
+
 exit $RET
 # EOF
