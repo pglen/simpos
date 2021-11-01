@@ -1,3 +1,0 @@
-sbin/extlinux				/usr/bin
-usr/share/doc/extlinux
-usr/share/syslinux/*mbr.bin		/usr/lib/EXTLINUX

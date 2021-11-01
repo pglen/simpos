@@ -12,7 +12,7 @@
 start:				; Start of program label
 
 	mov rsi, startmessage	; Load RSI with memory address of string
-	call output		; Print the string that RSI points to
+	call output		        ; Print the string that RSI points to
 
 ;Get processor brand string
 	xor rax, rax

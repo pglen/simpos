@@ -22,6 +22,26 @@ interrupt_gate:				; handler for all other interrupts
 	iretq
 ; -----------------------------------------------------------------------------
 
+align 16
+mouse:
+	push rdi
+	push rax
+    pushfq
+
+	xor eax, eax
+
+    mov esi, message32
+    call serial_out
+
+ mouse_done:
+
+    out 0xA0, al
+	out 0x20, al
+
+    popfq
+	pop rax
+	pop rdi
+	iretq
 
 ; -----------------------------------------------------------------------------
 ; Keyboard interrupt. IRQ 0x01, INT 0x21
@@ -30,6 +50,9 @@ align 16
 keyboard:
 	push rdi
 	push rax
+
+    mov esi, keybirq
+    call serial_out
 
 	xor eax, eax
 

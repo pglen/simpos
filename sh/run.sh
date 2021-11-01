@@ -15,6 +15,8 @@ cmd=( qemu-system-x86_64
 	-smp 6
 # Amount of memory in Megabytes
 	-m 2048
+# Mouse
+#    -device mouse
 # Disk configuration
 	-drive id=disk0,file="sys/disk.img",if=none,format=raw
 	-device ahci,id=ahci

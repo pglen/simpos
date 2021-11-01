@@ -14,5 +14,8 @@ clean_dir "src/mon-code"
 clean_dir "src/app-code"
 clean_dir "src/BMFS"
 
-rm -rf sys
+echo Removing generated sys files
+rm -rf sys/*
+# So tail can see the inode
+touch sys/serial.log
 

@@ -1,2 +1,0 @@
-# syslinux contains the VBR (volume boot record) which needs zlib embedded
-syslinux: embedded-library usr/bin/syslinux: zlib

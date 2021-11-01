@@ -76,7 +76,7 @@ build_dir "src/mon-code" || exit 1
 build_dir "src/app-code" || exit 1
 build_dir "src/BMFS" || exit 1
 
-echo Copying components ...
+#echo Copying components ...
 copy_file "src/simpos64/bin/isombr.sys" "${OUTPUT_DIR}/isombr.sys"
 copy_file "src/simpos64/bin/mbr.sys" "${OUTPUT_DIR}/mbr.sys"
 copy_file "src/simpos64/bin/multiboot.sys" "${OUTPUT_DIR}/multiboot.sys"
@@ -84,9 +84,9 @@ copy_file "src/simpos64/bin/multiboot2.sys" "${OUTPUT_DIR}/multiboot2.sys"
 copy_file "src/simpos64/bin/pure64.sys" "${OUTPUT_DIR}/pure64.sys"
 copy_file "src/simpos64/bin/pxestart.sys" "${OUTPUT_DIR}/pxestart.sys"
 copy_file "src/os-code/bin/kernel.sys" "${OUTPUT_DIR}/kernel.sys"
-copy_file "src/os-code/bin/kernel-debug.txt" "${OUTPUT_DIR}/kernel-debug.txt"
+#copy_file "src/os-code/bin/kernel-debug.txt" "${OUTPUT_DIR}/kernel-debug.txt"
 copy_file "src/mon-code/bin/monitor.bin" "${OUTPUT_DIR}/monitor.bin"
-copy_file "src/mon-code/bin/monitor-debug.txt" "${OUTPUT_DIR}/monitor-debug.txt"
+#copy_file "src/mon-code/bin/monitor-debug.txt" "${OUTPUT_DIR}/monitor-debug.txt"
 #copy_file "src/BMFS/bin/bmfs" "${OUTPUT_DIR}/bmfs"
 
 cd sys

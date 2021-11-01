@@ -1,3 +1,0 @@
-version=4
-opts="dversionmangle=s/\+dfsg\d*$//,repacksuffix=+dfsg1,repack,compression=xz" \
-	https://www.kernel.org/pub/linux/utils/boot/syslinux/ syslinux-@ANY_VERSION@@ARCHIVE_EXT@

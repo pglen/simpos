@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+#set -e
 
 export EXEC_DIR="$PWD"
 export OUTPUT_DIR="$PWD/sys"

@@ -10,6 +10,7 @@ message64:  db          'In 64 OK', 10, 0
 message:    db          'Pure64 OK', 10, 0
 ;messageK:   db          'Kernel Jump OK', 10, 0
 ;messageI:   db          'Done INI', 10, 0
+keybirq         db 'KEY IRQ Pure', 10, 0
 
 ;CONFIG
 cfg_smpinit:		db 1	; By default SMP is enabled. Set to 0 to disable.

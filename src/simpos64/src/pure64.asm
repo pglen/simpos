@@ -98,6 +98,41 @@ start32:
     mov esi, message32
     call serial_out
 
+set_mouse_ap:
+	in al, 0x64
+	test al, 0x02
+	jnz set_mouse_ap
+    mov al, 0xd4
+    out  0x64, al
+
+ set_mouse_ap2:
+	in al, 0x64
+	test al, 0x02
+	jnz set_mouse_ap2
+    mov al, 0xff
+    out  0x60, al
+
+ set_mouse_ap3:
+	in al, 0x64
+	test al, 0x02
+	jnz set_mouse_ap3
+    mov al, 0x20
+    out  0x64, al
+
+ set_mouse_ap4:
+	in al, 0x64
+	test al, 0x02
+	jnz set_mouse_ap4
+    mov al, 0x2
+    out  0x64, al
+
+ set_mouse_ap5:
+	in al, 0x64
+	test al, 0x02
+	jnz set_mouse_ap5
+    mov al, 0x60
+    out  0x64, al
+
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
 ; http://www.nondot.org/sabre/os/files/MiscHW/RealtimeClockFAQ.txt
@@ -436,6 +471,9 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call create_gate
 	mov edi, 0x28			; Set up RTC handler
 	mov eax, rtc
+	call create_gate
+    mov edi, 0x2c			; Set up Mouse handler
+	mov eax, mouse
 	call create_gate
 
 	lidt [IDTR64]			; load IDT register

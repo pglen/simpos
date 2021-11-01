@@ -16,8 +16,10 @@ fi
 if [ -e $1 ] ; then
     FFF=$(stat -c %Y $1)
 else
-    echo Ref file must exist.
-    exit 2
+    if [ $VERB -ne 0 ] ; then
+        echo "Ref file does not exist"
+    fi
+    exit 1
 fi
 ORG=$1
 shift
@@ -30,7 +32,9 @@ do
     else
         SSS=0
     fi
-    echo $FFF $SSS
+    if [ $VERB -ne 0 ] ; then
+        echo $FFF $SSS
+    fi
 
     # Check date
     if [ $FFF -lt $SSS ] ; then
