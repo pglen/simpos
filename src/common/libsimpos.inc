@@ -19,33 +19,33 @@ sys_serial        equ 0x0000000000100050    ; Out to serial
 sys_dummy         equ 0x0000000000100058    ; Call a dummy function. IN: None OUT: None
 
 ; Index for b_config calls
-timecounter        equ 0
-smp_get_id        equ 1
-networkcallback_get    equ 3
-networkcallback_set    equ 4
-clockcallback_get    equ 5
-clockcallback_set    equ 6
-mac            equ 30
-pci_read        equ 0x40
-pci_write        equ 0x41
-stdout_set        equ 0x42
-stdout_get        equ 0x43
-drive_id        equ 0x50
+timecounter             equ 0
+smp_get_id              equ 1
+networkcallback_get     equ 3
+networkcallback_set     equ 4
+clockcallback_get       equ 5
+clockcallback_set       equ 6
+mac                     equ 30
+pci_read                equ 0x40
+pci_write               equ 0x41
+stdout_set              equ 0x42
+stdout_get              equ 0x43
+drive_id                equ 0x50
 
 ; Index for b_system calls
 
-smp_lock        equ 2
-smp_unlock        equ 3
-debug_dump_mem        equ 4
-debug_dump_rax        equ 5
-get_argc        equ 6
-get_argv        equ 7
-delay            equ 6
-ethernet_status        equ 7
-mem_get_free        equ 8
-smp_numcores        equ 9
-smp_set              equ 10
-reset            equ 256
+smp_lock                equ 2
+smp_unlock              equ 3
+debug_dump_mem          equ 4
+debug_dump_rax          equ 5
+get_argc                equ 6
+get_argv                equ 7
+delay                   equ 6
+ethernet_status         equ 7
+mem_get_free            equ 8
+smp_numcores            equ 9
+smp_set                 equ 10
+reset                   equ 256
 
 ; =============================================================================
 ; EOF

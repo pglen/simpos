@@ -16,7 +16,7 @@
 ; Max size of the resulting pure64.sys is 32768 bytes (32KiB)
 ; =============================================================================
 
-%include "../../common/common.inc"
+;%include "../../common/common.inc"
 
 BITS 32
 
@@ -275,13 +275,13 @@ align 16
 BITS 64
 
 start64:
-	xor eax, eax			; aka r0
-	xor ebx, ebx			; aka r3
-	xor ecx, ecx			; aka r1
-	xor edx, edx			; aka r2
-	xor esi, esi			; aka r6
-	xor edi, edi			; aka r7
-	xor ebp, ebp			; aka r5
+	xor rax, rax			; aka r0
+	xor rbx, rbx			; aka r3
+	xor rcx, rcx			; aka r1
+	xor rdx, rdx			; aka r2
+	xor rsi, rsi			; aka r6
+	xor rdi, rdi			; aka r7
+	xor rbp, rbp			; aka r5
 	mov esp, 0x8000			; aka r4
 	xor r8, r8
 	xor r9, r9
@@ -299,8 +299,9 @@ start64:
 	mov gs, ax
 
 	mov rax, clearcs64		; Do a proper 64-bit jump. Should not be needed as the ...
-	jmp rax				; jmp SYS64_CODE_SEL:start64 would have sent us ...
-	nop				; out of compatibility mode and into 64-bit mode
+	jmp rax				    ; jmp SYS64_CODE_SEL:start64 would have sent us ...
+	nop				        ; out of compatibility mode and into 64-bit mode
+
 clearcs64:
 	xor eax, eax
 
@@ -309,7 +310,7 @@ clearcs64:
     mov rsi, message64		; Location of message
     call serial_out
 
-    ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
+    ; Patch Pure64 AP code  ; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
@@ -547,6 +548,7 @@ nextIOAPIC:
 	jne nextIOAPIC
 
 	mov di, 0x5080
+    xor rax, rax
 	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
 	stosd
 	mov eax, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
@@ -554,8 +556,8 @@ nextIOAPIC:
 	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
 	stosb
 
-    ;mov rsi, messageI		; Location of message
-    ;call serial_out
+    mov rsi, messageI		; Location of message
+    call serial_out
 
 ; Move the trailing binary to its final location
 	mov esi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys

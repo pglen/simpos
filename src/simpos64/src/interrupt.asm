@@ -51,8 +51,8 @@ keyboard:
 	push rdi
 	push rax
 
-    mov esi, keybirq
-    call serial_out
+    ;mov esi, keybirq
+    ;call serial_out
 
 	xor eax, eax
 

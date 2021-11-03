@@ -9,7 +9,7 @@ message32:  db          'In 32 OK', 10, 0           ; new line comes first
 message64:  db          'In 64 OK', 10, 0
 message:    db          'Pure64 OK', 10, 0
 ;messageK:   db          'Kernel Jump OK', 10, 0
-;messageI:   db          'Done INI', 10, 0
+messageI:   db          'Done INI', 10, 0
 keybirq         db 'KEY IRQ Pure', 10, 0
 
 ;CONFIG
@@ -74,7 +74,6 @@ IDTR64:					; Interrupt Descriptor Table Register
 	dq 0x0000000000000000		; linear address of IDT
 ; -----------------------------------------------------------------------------
 
-%ifdef CRAP
 
 ; VESA
 ; Mandatory information for all VBE revisions
@@ -114,7 +113,6 @@ VBEModeInfoBlock.PhysBasePtr		equ VBEModeInfoBlock + 40	; DD - physical address 
 VBEModeInfoBlock.Reserved1		equ VBEModeInfoBlock + 44	; DD - Reserved - always set to 0
 VBEModeInfoBlock.Reserved2		equ VBEModeInfoBlock + 48	; DD - Reserved - always set to 0
 
-%endif
 
 ; =============================================================================
 ; EOF
