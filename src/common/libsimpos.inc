@@ -19,6 +19,7 @@ sys_serial        equ 0x0000000000100050    ; Out to serial
 sys_dummy         equ 0x0000000000100058    ; Call a dummy function. IN: None OUT: None
 
 ; Index for b_config calls
+
 timecounter             equ 0
 smp_get_id              equ 1
 networkcallback_get     equ 3
