@@ -19,6 +19,9 @@ build:
 run:  build
 	./sh/run.sh
 
+jump:  build
+	./sh/install-jump.sh
+
 clean:
 	./sh/clean.sh
 
