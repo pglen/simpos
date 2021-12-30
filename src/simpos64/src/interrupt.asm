@@ -9,6 +9,10 @@
 ; -----------------------------------------------------------------------------
 ; Default exception handler
 exception_gate:
+
+    mov esi, exc_str
+    ;call serial_out
+
 exception_gate_halt:
 	cli				; Disable interrupts
 	hlt				; Halt the system
@@ -197,9 +201,14 @@ exception_gate_19:
 	jmp exception_gate_main
 
 exception_gate_main:
+
+    mov esi, exc_str
+    call serial_out
+
 exception_gate_main_hang:
 	nop
 	jmp exception_gate_main_hang	; Hang. User must reset machine at this point
+
 ; -----------------------------------------------------------------------------
 
 

@@ -14,7 +14,6 @@
 ; DF = Device/Function, 8 bits
 ; RG = Register, 8 bits, 6 used, upper 2 bits will be cleared if set
 
-
 ; -----------------------------------------------------------------------------
 ; os_pci_read -- Read from a register on a PCI device
 ;  IN:	EDX = Register to read from

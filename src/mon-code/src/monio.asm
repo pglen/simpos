@@ -461,20 +461,13 @@ screen_clear:
     push rax
     pushfq
 
-    ;mov     rsi, message_clear
-    ;call    string_length
-    ;call    [sys_serial]
-
     ;mov rax, [VideoBase]
     ;call mon_debug_dump_eax
-
     ;mov rsi, retx
     ;mov rcx, 3
     ;call [sys_serial]
 
     mov eax, [BG_Color]
-
-    ;call mon_debug_dump_eax
 
     mov ebx, eax                ; jugle it around do ah contans Los RGB
     mov edx, eax                ; jugle it around do ah contans Los RGB

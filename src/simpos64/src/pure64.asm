@@ -98,6 +98,27 @@ start32:
     mov esi, message32
     call serial_out
 
+
+    push    eax
+    push    ebx
+    mov     EAX, 0x80000001
+    cpuid
+    and     edx, 1<<29
+    cmp     edx,0
+    pop     eax
+    pop     edx
+    jg      got_64
+
+    mov esi, not_64
+    call serial_out
+
+    ; Also show on display
+    mov esi, not_64
+    call    console_out
+    hlt
+
+got_64:
+
 set_mouse_ap:
 	in al, 0x64
 	test al, 0x02
@@ -132,6 +153,9 @@ set_mouse_ap:
 	jnz set_mouse_ap5
     mov al, 0x60
     out  0x64, al
+
+    mov esi, start_rtc
+    call serial_out
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
@@ -242,8 +266,14 @@ pd_low:					; Create a 2 MiB page
 	cmp ecx, 2048
 	jne pd_low			; Create 2048 2 MiB page maps.
 
-; Load the GDT
+    mov esi, pages_loaded
+    call serial_out
+
+    ; Load the GDT
 	lgdt [GDTR64]
+
+    mov esi, prot_loaded
+    call serial_out
 
 ; Enable extended properties
 	mov eax, cr4
@@ -259,6 +289,9 @@ pd_low:					; Create a 2 MiB page
 	rdmsr				; Read EFER
 	or eax, 0x00000101 		; LME (Bit 8)
 	wrmsr				; Write EFER
+
+    mov esi, prot_loaded
+    call serial_out
 
 ; Enable paging to activate long mode
 	mov eax, cr0
@@ -604,6 +637,25 @@ serial_out:
 
  serial_done:
     ret
+
+; ------------------------------------------------------
+console_out:
+
+    mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
+    mov edi,  eax
+
+ con_next:
+
+    lodsb
+    cmp     al, 0
+    je      con_done
+    stosb
+    jmp con_next
+
+ con_done:
+
+    ret
+
 
 done_maps:
 

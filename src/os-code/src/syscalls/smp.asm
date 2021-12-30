@@ -73,6 +73,7 @@ b_smp_wakeup_all:
 ; b_smp_get_id -- Returns the APIC ID of the CPU that ran this function
 ;  IN:	Nothing
 ; OUT:	RAX = CPU's APIC ID number, All other registers preserved.
+
 b_smp_get_id:
 	push rsi
 

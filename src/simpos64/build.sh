@@ -3,7 +3,7 @@
 export EXEC_DIR="$PWD"
 
 cd src
-nasm pure64.asm -o ../bin/pure64.sys  || exit 1
+nasm pure64.asm -o ../bin/pure64.sys -l ../bin/pure64.lst || exit 1
 
 cd bootsectors
 nasm isombr.asm -o ../../bin/isombr.sys || exit 1

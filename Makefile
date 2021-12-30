@@ -34,3 +34,7 @@ isorun:  isobuild
 runiso:
 	./sh/runiso.sh
 
+vdi:  build
+	./sh/vdi.sh
+	#VBoxManage startvm "SimpOS"
+	VirtualBoxVM --debug --startvm SimpOS

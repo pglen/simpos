@@ -12,9 +12,10 @@ cmd=( qemu-system-x86_64
 	-device e1000,netdev=net0
 	-netdev user,id=net0
 # Amount of CPU cores
-	-smp 4
+	-smp 2
 # Amount of memory in Megabytes
 	-m 2048
+    -usb
 # Mouse
 #    -device mouse
 # Disk configuration

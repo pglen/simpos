@@ -7,17 +7,16 @@
 ; The BareMetal exokernel
 ; =============================================================================
 
-
-
 %include "../../common/common.inc"
 
-BITS 64                	        ; Specify 64-bit
-ORG 0x0000000000100000            ; The kernel needs to be loaded at this address
+BITS 64                	                ; Specify 64-bit
+ORG     0x0000000000100000              ; The kernel needs to be loaded at this address
+STACK   equ 0x0000000000110000          ; Where to start?
 
 KERNELSIZE equ 8192            ; Pad the kernel to this length
 
 kernel_start:
-    jmp start            ; Skip over the function call index
+    jmp start              ; Skip over the function call index
     nop
     db  'SimpOS   '        ; Kernel signature
 
@@ -30,7 +29,7 @@ align 16
     dq b_disk_write        ; 0x0038
     dq b_config            ; 0x0040
     dq b_system            ; 0x0048
-    dq b_serial            ; 0x0050
+    dq b_output            ; 0x0050
     dq b_dummy             ; 0x0058
     dq b_dummy             ; 0x0058
     dq b_dummy             ; 0x0058
@@ -40,19 +39,157 @@ align 16
 
 align 16
 start:
-    call init_64            ; After this point we are in a working 64-bit environment
-    call init_pci            ; Initialize the PCI bus
-    call init_hdd            ; Initialize the disk
-    call init_net            ; Initialize the network
 
+    ; Estabilish stack
+    mov   rsp, STACK
+
+    ;push rsi
+    ;push rcx
+    ;mov rsi, readymsg0
+    ;mov rcx, 5
+    ;call b_output
+    ;pop rcx
+    ;pop rsi
+
+    call init_64            ; After this point we are in a working 64-bit environment
+
+    mov rsi, readymsg1
+    mov rcx, 5
+    call b_output
+
+    ; provoke exception -- test OK
+    ;mov rsi, 0x1ffffffff
+    ;mov byte [rsi], 0
+
+    call init_pci            ; Initialize the PCI bus
+
+    cmp byte [os_PCIEnabled], 0
+    je  nopci
+
+    mov rsi, readymsg2
+    mov rcx, 5
+    call b_output
+
+    jmp hdinit
+
+nopci:
+    mov rsi, nopcimsg
+    mov rcx, 7
+    call b_output
+
+hdinit:
+    call init_hdd            ; Initialize the disk
+    mov rsi, readymsg3
+    mov rcx, 5
+    call b_output
+
+    ;call init_net            ; Initialize the network
+    ;mov rsi, readymsg4
+    ;mov rcx, 5
+    ;call b_output
+
+    ;mov rsi, newline
+    ;mov rcx, 2
+    ;call b_output
+    ;jmp print_pci
+
+print_pci:
+
+    ; Print PCI
+    mov edi, 0
+
+  again_pci_bus:
+
+    ;mov     rsi, bus
+    ;mov     rcx, 5
+    ;call    b_output
+
+    ;mov     eax, edi
+    ;call    os_debug_dump_eax
+
+    ;mov     rsi, newline
+    ;mov     rcx, 1
+    ;call    b_output
+
+    mov word [dev_cnt], 0
+
+  again_pci:
+
+    ;0x 00 BS DF RG
+    xor  edx, edx
+    mov  dx, word [dev_cnt]
+    shl  edx, 8
+
+    push    rdi
+    shl     edi, 16             ; bus number
+    or      edx,edi
+    pop     rdi
+
+    ;mov     eax, edx
+    ;call    os_debug_dump_eax
+    ;push    rsi
+    ;mov     rsi, colonspace
+    ;call    b_output
+
+    call    os_pci_read
+
+    cmp     eax, 0xFFFFFFFF
+    je      noslot
+
+    push    rax
+    push    rcx
+
+    ;mov     eax, ecx
+    ;call    os_debug_dump_eax
+
+    ;mov     rsi, colonspace
+    ;mov     rcx, 2
+    ;call    b_output
+
+    pop     rcx
+    pop     rax
+
+    ;call    os_debug_dump_eax
+
+    ;push    rcx
+    ;mov     rsi, space
+    ;mov     rcx, 1
+    ;call    b_output
+    ;pop     rcx
+
+  noslot:
+    inc     word [dev_cnt]
+    cmp     word [dev_cnt], 255
+    jb      again_pci
+
+    ;push    rcx
+    ;mov     rsi, newline
+    ;mov     rcx, 1
+    ;call    b_output
+    ;pop     rcx
+
+    inc  edi
+    cmp  edi, 4
+    jb   again_pci_bus
+
+    ; Sign on
     mov rsi, readymsg
-    mov rcx, 11
+    ;mov rcx, 11
     call b_output
 
     ; Copy the payload after the kernel to the proper address
-    mov rsi, 0x100000 + KERNELSIZE    ; Payload starts right after the kernel
-    cmp qword [rsi], 0        ; Is there a payload after the kernel?
-    je ap_clear            ; If not, skip to ap_clear
+    mov rsi, 0x100000 + KERNELSIZE      ; Payload starts right after the kernel
+    cmp qword [rsi], 0x00               ; Is there a payload after the kernel?
+    jne  ap_copy                        ; If not, skip to ap_clear
+
+    push rsi
+    mov rsi, noload_msg
+    mov rcx, 15
+    call b_output
+    pop rsi
+    hlt
+
+  ap_copy:
 
     mov rdi, 0x1E0000
     mov rcx, 2048
@@ -60,9 +197,8 @@ start:
 
     ;push rsi
     ;mov rsi, copied_mon
-    ;mov rcx, 15
     ;call b_output
-    ;pop rsi
+    ;pop  rsi
 
     ; Set the payload to run
     mov qword [os_ClockCallback], init_process
@@ -70,8 +206,8 @@ start:
     ; Fall through to ap_clear as align fills the space with No-Ops
     ; At this point the BSP is just like one of the AP's
 
-    ;mov rsi, call_init
-    ;call b_output
+    mov rsi, call_init
+    call b_output
 
     ;mov rsi, 0x100000
     ;mov rcx, 128
@@ -145,9 +281,22 @@ ap_halt:                    ; Halt until a wakeup call is received
 
 ap_process:
 
-    ;mov rsi, proc_start
-    ;mov rcx, 6
-    ;call b_output
+    push    rsi
+    push    rcx
+    push    rax
+
+    mov rsi, proc_start
+    call b_output
+
+    ;call os_debug_dump_rax
+
+    pop rax
+    pop rcx
+    pop rsi
+
+    ; provoke exception
+    ;mov rsi, 0x1ffffffff
+    ;mov byte [rsi], 0
 
     mov rcx, 1            ; Set the active flag
     call b_smp_setflag
@@ -156,19 +305,37 @@ ap_process:
     jmp ap_clear            ; Reset the stack, clear the registers, and wait for something else to work on
 
 init_process:
-    call b_smp_get_id        ; Get the ID of the current core
-    mov rcx, rax            ; Copy the APIC ID for b_smp_set
+
+    mov qword [os_ClockCallback], 0     ; Clear the callback
+    call b_smp_get_id                   ; Get the ID of the current core
+
+    ; provoke exception
+    ;mov rsi, 0x1ffffffff
+    ;mov byte [rsi], 0
+
+    ;call os_debug_dump_rax
+
+    push rsi
+    push rcx
+
+    ;call os_debug_dump_rax
+    mov rsi, called_init
+    call b_output
+
+    pop rcx
+    pop rsi
+
+    mov rcx, rax             ; Copy the APIC ID for b_smp_set
     mov rax, 0x1E0000        ; Payload was copied here
     call b_smp_set
-    mov qword [os_ClockCallback], 0    ; Clear the callback
 
-    ;push rsi
-    ;push rcx
-    ;mov rsi, called_init
-    ;mov rcx, 12
-    ;call b_output
-    ;pop rcx
-    ;pop rsi
+    ; provoke exception
+    ;mov rsi, 0x1ffffffff
+    ;mov byte [rsi], 0
+
+    ;divide by zero
+    ;xor     bl, bl
+    ;div     bl
 
     ret
 
@@ -194,7 +361,7 @@ b_dummy:
     push rsi
     push rcx
     mov rsi, dummymsg
-    mov rcx, 21
+    ;mov rcx, 21
     call b_output
     pop rsi
     pop rcx
@@ -206,9 +373,6 @@ b_dummy:
 %include "drivers.asm"
 %include "interrupt.asm"
 %include "kernvar.asm"       ; Include this last to keep the read/write variables away from the code
-
-align 8
-dummymsg:        db   'Called Dummy SysCall', 10, 0, 0, 0
 
 times KERNELSIZE-($-$$) db 0        ; Set the compiled kernel binary to at least this size in bytes
 

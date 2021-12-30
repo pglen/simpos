@@ -5,6 +5,10 @@ ORG 0x001E0000
 
 start:
 
+    mov     rsi, monstart
+    call    string_length
+    call    [sys_serial]
+
     ; Grab video values from Pure64
     mov rsi, 0x5080
     xor eax, eax
@@ -50,9 +54,9 @@ start:
     mov dword [Screen_Row_2], eax
 
     ; Emit start message
-    mov     rsi, monstart
-    call    string_length
-    call    [sys_serial]
+    ;mov     rsi, monstart
+    ;call    string_length
+    ;call    [sys_serial]
 
     ; Set foreground/background color
     ;mov eax, 0x00FFFFFF
@@ -134,7 +138,6 @@ start:
     mov     rsi, mondone
     call    string_length
     call    [sys_serial]
-
 
 poll:
     mov rsi, prompt

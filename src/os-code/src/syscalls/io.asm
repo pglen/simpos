@@ -29,8 +29,9 @@ b_input_no_key:
 ; -----------------------------------------------------------------------------
 ; b_output -- Outputs characters
 ;  IN:	RSI = message location (non zero-terminated)
-;	RCX = MAX number of chars to output
+;---- Obsolete	RCX = MAX number of chars to output
 ; OUT:	All registers preserved
+
 b_serial:
 b_output:
 	push rsi			; Message location
@@ -43,7 +44,7 @@ b_output:
     ;mov  cx, 48
 
 b_output_nextchar:
-	jrcxz b_output_done		; If RCX is 0 then the function is complete
+	;jrcxz b_output_done		; If RCX is 0 then the function is complete
 	add dx, 5			; Offset to Line Status Register
 	in al, dx
 	sub dx, 5			; Back to to base
@@ -51,8 +52,8 @@ b_output_nextchar:
 	je b_output_nextchar
 	dec rcx
 	lodsb				; Get char from string and store in AL
-    ;cmp al, 0
-    ;je  b_output_done
+    cmp al, 0
+    je  b_output_done
 	out dx, al			; Send the char to the serial port
 	jmp b_output_nextchar
 

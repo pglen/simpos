@@ -10,8 +10,6 @@ align 8
 
 prompt:             db '> ', 0
 message_reboot:     db 'Rebooting ...', 10, 0
-message_clear:      db 'Cls', 10, 0
-
 message_ver:        db 'SimpOS 64 bit Version 1.0', 13, 0
 message_run:        db 'Running: ', 0
 message_load:       db 'Enter file number: ', 0

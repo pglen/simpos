@@ -5,10 +5,11 @@
 ; 64-bit initialization
 ; =============================================================================
 
-
 ; -----------------------------------------------------------------------------
 init_64:
+
 	; Set the temporary stack
+    ;mov   rsp, 0x110000    ;????????
 
 	; Clear system variables area
 	mov edi, os_SystemVariables

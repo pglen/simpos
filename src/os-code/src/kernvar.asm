@@ -11,16 +11,38 @@ hextable: 		db '0123456789ABCDEF'
 ; Strings
 ;system_status_header:	db    'SimpOS v0.0.0', 0
 
-readymsg:		db            'SimpOS OK'	; This string falls thru to newline
-newline:		db 10, 0
+readymsg0:		db            'p64  ', 0
+readymsg1:		db            'x64  ', 0
+readymsg2:		db            'pcz  ', 0
+readymsg3:		db            'ide  ', 0
+readymsg4:		db            'net  ', 0
+
+colonspace:     db            ': ', 0
+colon:          db            ':', 0
+space:          db            ' ', 0
+bus:            db            'bus: ', 0
+nopcimsg        db            'no pci ', 0
+
+copied_mon      db            'Copied mon', 10, 0
+
+readymsg:		db            10, 'SimpOS OK'	; This string falls thru to newline
+newline:		db            10, 0
 stepmsg:		db            '12345678', 10, 0
 called_init:    db            'Called Init', 10, 0
-proc_start      db            'Proc ', 10, 0
+call_init:      db            'Call Init', 10, 0
+proc_start      db            'Proc Start', 10, 0
 proc_unhalt     db            'Unhalt ', 10, 0
 kbirq           db            'KB IRQ ', 10, 0
-mouirq           db           'MOU IRQ ', 10, 0
+mouirq          db            'MOU IRQ ', 10, 0
 
-timer_msg       db 'Timer Tick ', 0
+timer_msg        db           'Timer Tick ', 0
+noload_msg       db           'No mon loaded', 10, 0
+
+dummymsg:        db            'Called Dummy SysCall', 10, 0, 0, 0
+
+bus_cnt     db      0
+dev_cnt     dw      0
+was_entry   db      0
 
 memory_message:		db 'Not enough system memory for CPU stacks! System halted.', 0
 
@@ -108,8 +130,7 @@ keylayoutupper:
 db 0x00, 0, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', 0x0e, 0, 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', 0x1c, 0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', 0x22, '~', 0, '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0, 0, 0, ' ', 0
 ; 0e = backspace
 ; 1c = enter
-tchar: db 0, 0
-
+tchar: db 0, 0, 0, 0
 
 ;------------------------------------------------------------------------------
 
