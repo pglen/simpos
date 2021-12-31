@@ -7,11 +7,7 @@
 
 PS2_ENABLE_AUX_INPUT    equ 0xAE
 PS2_ENABLE_AUX_INPUT2   equ 0xA8
-
-;outportb(0x64, PS2_ENABLE_AUX_INPUT);
-
-
-DELAY_ONE    equ  0x8ffffff
+DELAY_ONE               equ  0x8ffffff
 
 ; -----------------------------------------------------------------------------
 ; Mostly for testing
@@ -19,11 +15,6 @@ DELAY_ONE    equ  0x8ffffff
 ; use:
     ;mov rax, 0x8ffffff     ; appx 1 sec
     ;call useless_delay
-
-keyb_init    db     'keyb_init', 10, 0
-keyb_done    db     'keyb_done', 10, 0
-
-align 8
 
 useless_delay:
 
@@ -89,14 +80,7 @@ init_kb:
 
     in  al, 0x60
 
-    ;mov al, 0xF6
-    ;out 0x64, al
-    ;call wait_kb
-    ;
-    ;mov al, 0xF4
-    ;out 0x64, al
-    ;call wait_kb
-
+    ; Reset kb (optional)
     mov al, 0xFF
     out 0x64, al
     call wait_kb
@@ -104,6 +88,7 @@ init_kb:
     ;mov rax, 0x3 * DELAY_ONE
     ;call useless_delay
 
+    ; pulse outputs (does not work)
     ; Pulse output
     ;mov al, 0xf6
     ;out 0x64, al
@@ -113,11 +98,16 @@ init_kb:
     ;out 0x64, al
     ;call wait_kb
 
-    mov esi, keyb_done
-    call serial_out
+    ;mov esi, keyb_done
+    ;call serial_out
 
     ret
 ; -----------------------------------------------------------------------------
+
+keyb_init    db     'keyb_init', 10, 0
+keyb_done    db     'keyb_done', 10, 0
+
+align 8
 
 
 ; =============================================================================
