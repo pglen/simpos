@@ -36,5 +36,5 @@ runiso:
 
 vdi:  build
 	./sh/vdi.sh
-	#VBoxManage startvm "SimpOS"
-	VirtualBoxVM --debug --startvm SimpOS
+	VBoxManage startvm "SimpOS"
+	#VirtualBoxVM --debug --startvm SimpOS

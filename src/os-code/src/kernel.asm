@@ -41,7 +41,7 @@ align 16
 start:
 
     ; Estabilish stack
-    mov   rsp, STACK
+    ;mov   rsp, STACK
 
     ;push rsi
     ;push rcx
@@ -74,19 +74,16 @@ start:
 
 nopci:
     mov rsi, nopcimsg
-    mov rcx, 7
     call b_output
 
 hdinit:
     call init_hdd            ; Initialize the disk
     mov rsi, readymsg3
-    mov rcx, 5
     call b_output
 
-    ;call init_net            ; Initialize the network
-    ;mov rsi, readymsg4
-    ;mov rcx, 5
-    ;call b_output
+    call init_net            ; Initialize the network
+    mov rsi, readymsg4
+    call b_output
 
     ;mov rsi, newline
     ;mov rcx, 2
@@ -213,7 +210,6 @@ print_pci:
     ;mov rcx, 128
     ;call os_debug_dump_mem
 
-
 align 16
 ap_clear:                ; All cores start here on first start-up and after an exception
     cli                ; Disable interrupts on this core
@@ -280,6 +276,12 @@ ap_halt:                    ; Halt until a wakeup call is received
     jmp ap_check            ; Core will jump to ap_check when it wakes up
 
 ap_process:
+
+    ; Raise keyboard interrupt (test)
+    int     0x21
+
+    ; Raise mouse interrupt (test)
+    int     0x2c
 
     push    rsi
     push    rcx

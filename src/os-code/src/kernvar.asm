@@ -22,9 +22,7 @@ colon:          db            ':', 0
 space:          db            ' ', 0
 bus:            db            'bus: ', 0
 nopcimsg        db            'no pci ', 0
-
 copied_mon      db            'Copied mon', 10, 0
-
 readymsg:		db            10, 'SimpOS OK'	; This string falls thru to newline
 newline:		db            10, 0
 stepmsg:		db            '12345678', 10, 0
@@ -32,9 +30,8 @@ called_init:    db            'Called Init', 10, 0
 call_init:      db            'Call Init', 10, 0
 proc_start      db            'Proc Start', 10, 0
 proc_unhalt     db            'Unhalt ', 10, 0
-kbirq           db            'KB IRQ ', 10, 0
-mouirq          db            'MOU IRQ ', 10, 0
-
+kbirq           db            'KB IRQ Scan: ', 0
+mouirq          db            'MOU IRQ Point: ', 0
 timer_msg        db           'Timer Tick ', 0
 noload_msg       db           'No mon loaded', 10, 0
 

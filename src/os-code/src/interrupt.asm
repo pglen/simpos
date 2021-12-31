@@ -40,9 +40,19 @@ mouse:
 	pushfq
 	cld				; Clear direction flag
 
-    ;mov rsi, mouirq
-    ;mov rcx, 8
-    ;call b_serial
+    push    rax
+
+    mov rsi, mouirq
+    call b_serial
+
+    mov rsi, space
+    call b_serial
+
+    call os_debug_dump_al
+
+    mov rsi, newline
+    call b_serial
+    pop rax
 
 	xor eax, eax
 
@@ -55,21 +65,32 @@ mouse:
 ; -----------------------------------------------------------------------------
 ; Keyboard interrupt. IRQ 0x01, INT 0x21
 ; This IRQ runs whenever there is input on the keyboard
+
 align 8
 keyboard:
 	push rdi
 	push rbx
 	push rax
 	pushfq
-	cld				; Clear direction flag
+	;cld				; Clear direction flag
 
-    ;mov rsi, kbirq
-    ;mov rcx, 7
-    ;call b_serial
+    mov rsi, kbirq
+    call b_serial
 
 	xor eax, eax
 
 	in al, 0x60			; Get the scan code from the keyboard
+
+    push    rax
+    mov rsi, space
+    call b_serial
+
+    call os_debug_dump_al
+
+    mov rsi, newline
+    call b_serial
+    pop rax
+
 	cmp al, 0x01
 	je keyboard_escape
 	cmp al, 0x2A			; Left Shift Make
