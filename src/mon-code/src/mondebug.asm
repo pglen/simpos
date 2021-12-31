@@ -298,12 +298,10 @@ show_memap:
 
     push rsi
     mov rsi, newline
-      mov rdx, 1
+    mov rdx, 1
 
-    call output_mon
     call output_mon
     pop rsi
-
 
     pop rcx
     ret

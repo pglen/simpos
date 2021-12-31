@@ -98,7 +98,6 @@ start32:
     mov esi, message32
     call serial_out
 
-
     push    eax
     push    ebx
     mov     EAX, 0x80000001
@@ -530,6 +529,9 @@ clearmapnext:
 
 	call init_smp			; Init of SMP
 
+	call init_kb			; Init of keyboard
+
+
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
@@ -684,6 +686,7 @@ done_maps:
 %include "init/cpu.asm"
 %include "init/pic.asm"
 %include "init/smp.asm"
+%include "init/keymou.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"
 
