@@ -25,7 +25,7 @@
     pop     esi
 %endmacro
 
-%macro   SerMsg64 1
+%macro   SerMsg 1
     push    rsi
     mov     rsi, %1
     call    serial_out
@@ -357,7 +357,7 @@ clearcs64:
 
     lgdt [GDTR64]    		; Reload the GDT
 
-    SerMsg64 message64
+    SerMsg message64
 
     ; Patch Pure64 AP code  ; The AP's will be told to start execution at 0x8000
     mov edi, start    		; We need to remove the BSP Jump call to get the AP's
@@ -611,7 +611,7 @@ nextIOAPIC:
     mov al, [VBEModeInfoBlock.BitsPerPixel]    	; Color depth
     stosb
 
-    SerMsg64 messageI    	; Location of message
+    SerMsg messageI    	; Location of message
 
 ; Move the trailing binary to its final location
     mov esi, 0x8000+PURE64SIZE    ; Memory offset to end of pure64.sys
@@ -619,13 +619,13 @@ nextIOAPIC:
     mov ecx, ((32768 - PURE64SIZE) / 8)
     rep movsq    		; Copy 8 bytes at a time
 
-    SerMsg64 message    	; Location of message
+    SerMsg message    	; Location of message
     jmp done_maps
 
 
 done_maps:
 
-    SerMsg64 msgmaps
+    SerMsg msgmaps
 
     ; Clear all registers (skip the stack pointer)
 
