@@ -18,17 +18,21 @@ init_cpu:
 	wbinvd
 
 ; Disable Paging Global Extensions
+%if 1
 	mov rax, cr4
 	btr rax, 7			; Clear Paging Global Extensions (Bit 7)
 	mov cr4, rax
 	mov rax, cr3
 	mov cr3, rax
+%endif
 
+%if 1
 ; Disable MTRRs and Configure default memory type to UC
 	mov ecx, 0x000002FF
 	rdmsr
 	and eax, 0xFFFFF300		; Clear MTRR Enable (Bit 11), Fixed Range MTRR Enable (Bit 10), and Default Memory Type (Bits 7:0) to UC (0x00)
 	wrmsr
+%endif
 
 ; Setup variable-size address ranges
 ; Cache 0-64 MiB as type 6 (WB) cache
@@ -67,10 +71,14 @@ init_cpu:
 	btr rax, 30			; Clear CD (Bit 30)
 	mov cr0, rax
 
+%if 1
 ; Enable Paging Global Extensions
-;	mov rax, cr4
-;	bts rax, 7			; Set Paging Global Extensions (Bit 7)
-;	mov cr4, rax
+	mov rax, cr4
+	bts rax, 7			; Set Paging Global Extensions (Bit 7)
+	mov cr4, rax
+%endif
+
+%if 1
 
 ; Enable Floating Point
 	mov rax, cr0
@@ -83,6 +91,8 @@ init_cpu:
 	bts rax, 9			; Set Operating System Support for FXSAVE and FXSTOR instructions (Bit 9)
 	bts rax, 10			; Set Operating System Support for Unmasked SIMD Floating-Point Exceptions (Bit 10)
 	mov cr4, rax
+
+%endif
 
 ; Enable Math Co-processor
 	finit
@@ -134,9 +144,7 @@ init_cpu:
 ;	bts eax, 16			;bit16:Mask interrupts (0==Unmasked, 1== Masked)
 ;	mov dword [rsi+0x370], eax
 
-
 ret
-
 
 ; =============================================================================
 ; EOF

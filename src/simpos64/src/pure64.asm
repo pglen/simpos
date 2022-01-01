@@ -16,33 +16,7 @@
 ; Max size of the resulting pure64.sys is 32768 bytes (32KiB)
 ; =============================================================================
 
-;%include "../../common/common.inc"
-
-%macro   SerMsg32 1
-    push    esi
-    mov     esi, %1
-    call    serial_out
-    pop     esi
-%endmacro
-
-%macro   SerMsg 1
-    push    rsi
-    mov     rsi, %1
-    call    serial_out
-    pop     rsi
-%endmacro
-
-%macro DumpMem 2
-    push    rax
-    push    rcx
-    push    rsi
-    mov     rsi, %1
-    mov     rcx, %2
-    call    debug_dump_mem
-    pop     rax
-    pop     rcx
-    pop     rsi
-%endmacro
+%include "../../common/common.inc"
 
 BITS 32
 
@@ -286,7 +260,7 @@ pd_low:    				; Create a 2 MiB page
     cmp ecx, 2048
     jne pd_low    		; Create 2048 2 MiB page maps.
 
-    SerMsg32 pages_cr
+    ;SerMsg32 pages_cr
 
     ; Load the GDT
     lgdt [GDTR64]
@@ -314,6 +288,8 @@ pd_low:    				; Create a 2 MiB page
     mov eax, cr0
     or eax, 0x80000000    	; PG (Bit 31)
     mov cr0, eax
+
+    SerMsg32 paging_active
 
     jmp SYS64_CODE_SEL:start64    ; Jump to 64-bit paged mode
 
@@ -449,8 +425,6 @@ pd_high_entry:
     jmp pd_high
 
  pd_high_done:
-
-    DumpMem 0x4000, 0x64
 
 ; Build a temporary IDT
     xor edi, edi     		; create the 64-bit IDT (at linear address 0x0000000000000000)
@@ -595,6 +569,7 @@ clearmapnext:
     xor ecx, ecx
     mov cl, [os_IOAPICCount]
     mov rsi, os_IOAPICAddress
+
 nextIOAPIC:
     lodsq
     stosq
@@ -611,7 +586,7 @@ nextIOAPIC:
     mov al, [VBEModeInfoBlock.BitsPerPixel]    	; Color depth
     stosb
 
-    SerMsg messageI    	; Location of message
+    SerMsg mesgini
 
 ; Move the trailing binary to its final location
     mov esi, 0x8000+PURE64SIZE    ; Memory offset to end of pure64.sys
@@ -622,8 +597,9 @@ nextIOAPIC:
     SerMsg message    	; Location of message
     jmp done_maps
 
-
 done_maps:
+
+    DumpMem os_LocalAPICAddress, 0x64
 
     SerMsg msgmaps
 

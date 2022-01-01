@@ -14,7 +14,7 @@ cmd=( qemu-system-x86_64
 # Amount of CPU cores
 	-smp 2
 # Amount of memory in Megabytes
-	-m 2702
+	-m 2908
 # Amount of memory in Megabytes where it dies
 #	-m 2824
     -usb

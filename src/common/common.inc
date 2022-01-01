@@ -4,6 +4,32 @@
 ; Written: Fri 29.Oct.2021
 ; =============================================================================
 
+; Macros
+
+%macro   SerMsg32 1
+    push    esi
+    mov     esi, %1
+    call    serial_out
+    pop     esi
+%endmacro
+
+%macro   SerMsg 1
+    push    rsi
+    mov     rsi, %1
+    call    serial_out
+    pop     rsi
+%endmacro
+
+%macro DumpMem 2
+    push    rcx
+    push    rsi
+    mov     rsi, %1
+    mov     rcx, %2
+    call    debug_dump_mem
+    pop     rsi
+    pop     rcx
+%endmacro
+
 ; Initial Memory Map
 ;
 ; |Begin            |Loader   |Buffer   |Graphics  |Text   |BIOS    |End

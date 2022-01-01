@@ -568,8 +568,14 @@ exception_gate_main:
 	push rcx			; Char counter
 	push rax			; Save RAX since b_smp_get_id clobbers it
 
-    mov rsi, newline
-	call b_serial
+    ;mov rax, [rsp-8]     			     ; RIP of caller
+	;call os_debug_dump_al
+    mov rsi, rsp
+    mov ecx, 64
+    call os_debug_dump_mem
+
+    ;mov rsi, newline
+	;call b_serial
 
     mov rsi, int_string00
     call b_serial

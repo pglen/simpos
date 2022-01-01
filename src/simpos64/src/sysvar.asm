@@ -17,15 +17,17 @@ exc_str             db          'Exception', 0
 
 ;messageK:          db          'Kernel Jump OK', 10, 0
 
-not_64:             db           'Not64bit', 10, 0
-not_acpi:           db           'No  ACPI', 10, 0
+not_64:             db          'Not64bit', 10, 0
+not_acpi:           db          'Not  ACPI', 10, 0
 
 start_rtc:          db          'RTC    OK', 10, 0
 paging_loaded:      db          'Paging OK', 10, 0
+paging_active:      db          'PagACT OK', 10, 0
+
 pages_cr:           db          'pages_cr', 10, 0
 prot_loaded:        db          'Prot   OK', 10, 0
 
-messageI:           db          'Done INI', 10, 0
+mesgini:            db          'Done INI', 10, 0
 keybirq             db          'KEY IRQ Pure', 10, 0
 
 ;CONFIG
