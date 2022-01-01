@@ -5,7 +5,6 @@
 ; Interrupts
 ; =============================================================================
 
-
 ; -----------------------------------------------------------------------------
 ; Default exception handler
 align 8
@@ -14,8 +13,8 @@ exception_gate:
 	;mov rsi, int_string00
 	;call b_serial
 
-	;mov rsi, exc_string
-	;call b_serial
+	mov rsi, exc_string
+	call b_serial
 
 	jmp $				; Hang
 ; -----------------------------------------------------------------------------
@@ -41,15 +40,11 @@ mouse:
 	cld				; Clear direction flag
 
     push    rax
-
     mov rsi, mouirq
     call b_serial
-
     mov rsi, space
     call b_serial
-
     call os_debug_dump_al
-
     mov rsi, newline
     call b_serial
     pop rax
@@ -66,6 +61,8 @@ mouse:
 ; Keyboard interrupt. IRQ 0x01, INT 0x21
 ; This IRQ runs whenever there is input on the keyboard
 
+%define SHOWKB 0
+
 align 8
 keyboard:
 	push rdi
@@ -74,22 +71,23 @@ keyboard:
 	pushfq
 	;cld				; Clear direction flag
 
+%if SHOWKB
     mov rsi, kbirq
     call b_serial
+%endif
 
 	xor eax, eax
-
 	in al, 0x60			; Get the scan code from the keyboard
 
+%if SHOWKB
     push    rax
     mov rsi, space
     call b_serial
-
     call os_debug_dump_al
-
     mov rsi, newline
     call b_serial
     pop rax
+%endif
 
 	cmp al, 0x01
 	je keyboard_escape

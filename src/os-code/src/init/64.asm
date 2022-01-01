@@ -9,7 +9,7 @@
 init_64:
 
 	; Set the temporary stack
-    ;mov   rsp, 0x110000    ;????????
+    ;mov   rsp, 0x110000    ; -- NO ????????
 
 	; Clear system variables area
 	mov edi, os_SystemVariables

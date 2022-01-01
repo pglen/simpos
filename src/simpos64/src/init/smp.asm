@@ -5,7 +5,6 @@
 ; INIT SMP
 ; =============================================================================
 
-
 init_smp:
 ; Check if we want the AP's to be enabled.. if not then skip to end
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled

@@ -14,7 +14,9 @@ cmd=( qemu-system-x86_64
 # Amount of CPU cores
 	-smp 2
 # Amount of memory in Megabytes
-	-m 2048
+	-m 2702
+# Amount of memory in Megabytes where it dies
+#	-m 2824
     -usb
 # Mouse
 #    -device mouse

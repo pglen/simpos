@@ -35,8 +35,8 @@ wait_kb:
 init_kb:
 
 
-    mov esi, keyb_init
-    call serial_out
+    ;mov esi, keyb_init
+    ;call serial_out
 
     ; Disable KB
     mov al, 0xad

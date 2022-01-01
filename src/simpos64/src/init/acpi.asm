@@ -119,6 +119,10 @@ init_smp_acpi_done:
 
 noACPI:
 novalidacpi:
+
+    mov esi, not_acpi
+    call    console_out
+
 	jmp $
 
 

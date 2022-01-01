@@ -38,7 +38,7 @@ mondone             db 'OK', 10, 0
 
 banner:
                     db ' ---------------------------------------------------------', 13
-                    db '   SimpOS Monitor Written by Peter Glen, using BareMetal',    13
+                    db '   SimpOS Operating System Written by Peter Glen, 2020 ',    13
                     db ' ---------------------------------------------------------', 13, 13, 13, 0
 
 memapmsg:           db 'Memory Map: ', 13,

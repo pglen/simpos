@@ -5,25 +5,31 @@
 ; System Variables
 ; =============================================================================
 
-message32:  db          'In 32 OK', 10, 0           ; new line comes first
-message64:  db          'In 64 OK', 10, 0
-message:    db          'Pure64 OK', 10, 0
+; Constants
 
-exc_str     db          'Exception', 0
+message32:          db          'In 32 OK', 10, 0           ; new line comes first
+message64:          db          'In 64 OK', 10, 0
+message:            db          'Pure64 OK', 10, 0
+memok:              db          'Mem OK', 10, 0
+msgmaps:              db        'Maps OK', 10, 0
 
-;messageK:   db          'Kernel Jump OK', 10, 0
+exc_str             db          'Exception', 0
 
-not_64:  db             'Not64bit', 10, 0
+;messageK:          db          'Kernel Jump OK', 10, 0
 
-start_rtc:  db          'RTC   OK', 10, 0
-pages_loaded:  db       'Pages OK', 10, 0
-prot_loaded:  db        'Prot  OK', 10, 0
+not_64:             db           'Not64bit', 10, 0
+not_acpi:           db           'No  ACPI', 10, 0
 
-messageI:   db          'Done INI', 10, 0
-keybirq     db          'KEY IRQ Pure', 10, 0
+start_rtc:          db          'RTC    OK', 10, 0
+paging_loaded:      db          'Paging OK', 10, 0
+pages_cr:           db          'pages_cr', 10, 0
+prot_loaded:        db          'Prot   OK', 10, 0
+
+messageI:           db          'Done INI', 10, 0
+keybirq             db          'KEY IRQ Pure', 10, 0
 
 ;CONFIG
-cfg_smpinit:		db 1	; By default SMP is enabled. Set to 0 to disable.
+cfg_smpinit:		db       1	; By default SMP is enabled. Set to 0 to disable.
 
 ; Memory locations
 E820Map:		equ 0x0000000000004000
