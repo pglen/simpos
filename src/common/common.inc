@@ -30,6 +30,35 @@
     pop     rcx
 %endmacro
 
+%macro SerNum64  1
+    push    rax
+    mov     rax, %1
+    call    debug_dump_rax
+    pop     rax
+%endmacro
+
+%macro SerNum32  1
+    push    rax
+    mov     eax, %1
+    call    debug_dump_eax
+    pop     rax
+%endmacro
+
+%macro SerNum16  1
+    push    rax
+    mov     ax, %1
+    call    debug_dump_ax
+    pop     rax
+%endmacro
+
+%macro Space  0
+    SerMsg  space
+%endmacro
+
+%macro Newline 0
+    SerMsg  newline
+%endmacro
+
 ; Initial Memory Map
 ;
 ; |Begin            |Loader   |Buffer   |Graphics  |Text   |BIOS    |End

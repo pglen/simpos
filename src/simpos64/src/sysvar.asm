@@ -12,8 +12,8 @@ message64:          db          'In 64 OK', 10, 0
 message:            db          'Pure64 OK', 10, 0
 memok:              db          'Mem OK', 10, 0
 msgmaps:              db        'Maps OK', 10, 0
-
-exc_str             db          'Exception', 0
+exc_str             db          'Exception ', 0
+mem_str             db          'Mem pages: ', 0
 
 ;messageK:          db          'Kernel Jump OK', 10, 0
 
@@ -21,7 +21,7 @@ not_64:             db          'Not64bit', 10, 0
 not_acpi:           db          'Not  ACPI', 10, 0
 
 start_rtc:          db          'RTC    OK', 10, 0
-paging_loaded:      db          'Paging OK', 10, 0
+paging_loaded:      db          'PagLOD OK', 10, 0
 paging_active:      db          'PagACT OK', 10, 0
 
 pages_cr:           db          'pages_cr', 10, 0
@@ -29,6 +29,9 @@ prot_loaded:        db          'Prot   OK', 10, 0
 
 mesgini:            db          'Done INI', 10, 0
 keybirq             db          'KEY IRQ Pure', 10, 0
+
+space               db          ' ', 0
+;newline             db          10, 0
 
 ;CONFIG
 cfg_smpinit:		db       1	; By default SMP is enabled. Set to 0 to disable.
@@ -82,9 +85,11 @@ gdt64:					; This structure is copied to 0x0000000000001000
 SYS64_NULL_SEL equ $-gdt64		; Null Segment
 	dq 0x0000000000000000
 SYS64_CODE_SEL equ $-gdt64		; Code segment, read/execute, nonconforming
-	dq 0x0020980000000000		; 0x00209A0000000000
+	;dq 0x0020980000000000		; 0x00209A0000000000
+	dq 0x00209A0000000000
 SYS64_DATA_SEL equ $-gdt64		; Data segment, read/write, expand down
-	dq 0x0000900000000000		; 0x0020920000000000
+	;dq 0x0000900000000000		; 0x0020920000000000
+	dq 0x0020920000000000
 gdt64_end:
 
 IDTR64:					; Interrupt Descriptor Table Register

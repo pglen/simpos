@@ -273,6 +273,7 @@ pd_low:    				; Create a 2 MiB page
     mov cr4, eax
 
 ; Point cr3 at PML4
+    ;mov eax, 0x00002008    	; Write-thru enabled (Bit 3)
     mov eax, 0x00002008    	; Write-thru enabled (Bit 3)
     mov cr3, eax
 
@@ -371,6 +372,7 @@ processfree:
     and rax, rdx
     ; At this point RAX points to the start and RCX has the # of pages
     shr rax, 21    		; page # to start on
+
     mov rdi, 0x400000    	; 4 MiB into physical memory
     add rdi, rax
     mov al, 1
@@ -383,6 +385,10 @@ processfree:
     mov dword [mem_amount], ebx
     shr ebx, 1
 
+    SerMsg mem_str
+    SerNum32 ebx
+    Newline
+
 ; Create the high memory map
     mov rcx, rbx
     shr rcx, 9    		; TODO - This isn't the exact math but good enough
@@ -393,6 +399,7 @@ processfree:
 create_pdpe_high:
     stosq
     add rax, 0x00001000    	; 4K later (512 records x 8 bytes)
+
     dec ecx
     cmp ecx, 0
     jne create_pdpe_high
@@ -422,9 +429,23 @@ pd_high_entry:
     stosq
     add rcx, 1
     add rdx, 1    		; We have mapped a valid page
+
+    ; Limit the amount of pages
+    ;cmp rcx, 0x512
+    ;ja  pd_high_done
+
     jmp pd_high
 
  pd_high_done:
+
+    ; Write back new mem amount
+    ;push   rcx
+    ;shl    ecx,  1
+    ;sub    ecx, 2
+    ;SerNum32 ecx
+    ;SerNum32 [mem_amount]
+    ;mov dword [mem_amount], ecx
+    ;pop     rcx
 
 ; Build a temporary IDT
     xor edi, edi     		; create the 64-bit IDT (at linear address 0x0000000000000000)
@@ -599,7 +620,7 @@ nextIOAPIC:
 
 done_maps:
 
-    DumpMem os_LocalAPICAddress, 0x64
+    ;DumpMem os_LocalAPICAddress, 0x64
 
     SerMsg msgmaps
 
