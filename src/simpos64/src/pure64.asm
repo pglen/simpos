@@ -20,7 +20,8 @@
 
 BITS 32
 
-ORG 0x8000
+ORG BUFF_ADDR
+;ORG 0xe000
 
 PURE64SIZE equ 4096    		     ; Pad Pure64 to this length
 
@@ -94,7 +95,6 @@ start32:
     call    console_out
     hlt
     jmp $
-
 
 got_64:
 
@@ -283,14 +283,14 @@ pd_low:    				; Create a 2 MiB page
     or eax, 0x00000101     	  ; LME (Bit 8)
     wrmsr    			      ; Write EFER
 
-    SerMsg32 paging_loaded
+    ;SerMsg32 paging_loaded
 
 ; Enable paging to activate long mode
     mov eax, cr0
     or eax, 0x80000000    	; PG (Bit 31)
     mov cr0, eax
 
-    SerMsg32 paging_active
+    ;SerMsg32 paging_active
 
     jmp SYS64_CODE_SEL:start64    ; Jump to 64-bit paged mode
 
@@ -385,6 +385,18 @@ processfree:
     mov dword [mem_amount], ebx
     shr ebx, 1
 
+    cmp ebx, 0
+    jne     gomem
+
+    SerMsg nomem_str
+    Newline
+
+  halt:
+    hlt
+    jmp halt
+
+  gomem:
+
     SerMsg mem_str
     SerNum32 ebx
     Newline
@@ -431,21 +443,21 @@ pd_high_entry:
     add rdx, 1    		; We have mapped a valid page
 
     ; Limit the amount of pages
-    ;cmp rcx, 0x512
-    ;ja  pd_high_done
+    cmp rcx, 0x350
+    ja  pd_high_done
 
     jmp pd_high
 
  pd_high_done:
 
     ; Write back new mem amount
-    ;push   rcx
-    ;shl    ecx,  1
-    ;sub    ecx, 2
+    push   rcx
+    shl    ecx,  1
+    sub    ecx, 2
     ;SerNum32 ecx
+    mov dword [mem_amount], ecx
     ;SerNum32 [mem_amount]
-    ;mov dword [mem_amount], ecx
-    ;pop     rcx
+    pop     rcx
 
 ; Build a temporary IDT
     xor edi, edi     		; create the 64-bit IDT (at linear address 0x0000000000000000)
@@ -609,8 +621,18 @@ nextIOAPIC:
 
     SerMsg mesgini
 
-; Move the trailing binary to its final location
-    mov esi, 0x8000+PURE64SIZE    ; Memory offset to end of pure64.sys
+    ; Check the trailing binary
+    mov ax, [BUFF_ADDR+PURE64SIZE+6]    ; Memory offset to end of pure64.sys
+
+    cmp ax, 0x6953
+    je  ok_cp
+
+    SerMsg not_loaded
+    call debug_dump_ax
+
+  ok_cp:
+    ; Move the trailing binary to its final location
+    mov esi, BUFF_ADDR+PURE64SIZE    ; Memory offset to end of pure64.sys
     mov edi, 0x100000    	    ; Destination address at the 1MiB mark
     mov ecx, ((32768 - PURE64SIZE) / 8)
     rep movsq    		; Copy 8 bytes at a time
@@ -660,8 +682,8 @@ times PURE64SIZE-($-$$) db 0x90
 
 endd:
 
-;%assign num endd-padd
-;%warning "padding available" num
+%assign num endd-padd
+%warning "padding available" num
 
 ; =============================================================================
 ; EOF

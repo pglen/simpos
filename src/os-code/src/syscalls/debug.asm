@@ -73,7 +73,24 @@ os_debug_dump_al:
 	pop rbx
 	ret
 ; -----------------------------------------------------------------------------
+; char in al
 
+out_char:
+
+    push    rsi
+    push    rcx
+
+    mov rsi, tchar
+    mov [rsi], al
+    mov byte [rsi + 1], 0
+	mov rcx, 2
+
+	call b_output
+
+    pop     rcx
+    pop     rsi
+
+    ret
 
 ; -----------------------------------------------------------------------------
 ; os_debug_dump_mem -- Dump content of memory in hex format
@@ -108,13 +125,13 @@ nextchar:
 	je os_debug_dump_mem_done_newline
 	push rsi			; Output ' '
 	push rcx
-	mov rsi, os_debug_dump_mem_chars+3
+	mov rsi, os_debug_dump_mem_chars+4
 	mov rcx, 1
 	call b_output
 	pop rcx
 	pop rsi
 	lodsb
-	call os_debug_dump_al
+	call    os_debug_dump_al
 
     cmp     dx, 8
     jne     nospace
@@ -133,6 +150,42 @@ nextchar:
 	inc rdx
 	cmp dx, 16			; End of line yet?
 	jne nextchar
+
+    ; print ascii after
+    push    rcx
+    push    rsi
+
+    mov     esi, debspace
+    call    b_output
+
+    pop     rsi                 ; Refresh esi
+    push    rsi
+
+    sub     esi, 16
+    mov     ecx, 16
+
+ more_16:
+    lodsb                       ; Get char from string
+    cmp     al, ' '             ; fill dot if unprintable
+    ja      do_next_1
+    mov     al, '.'
+    jmp     put_char
+  do_next_1:
+    cmp     al, 'z'
+    jbe     do_next_2
+    mov     al, '.'
+    jmp     put_char
+  do_next_2:
+  put_char:
+    call    out_char
+    dec     ecx
+    cmp     ecx, 0
+    jg      more_16              ; If 16 chars end of string
+
+    pop     rsi
+    pop     rcx
+
+
 	call os_debug_dump_mem_newline
 	cmp rcx, 0
 	je os_debug_dump_mem_done

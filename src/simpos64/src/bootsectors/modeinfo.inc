@@ -1,77 +1,5 @@
-; =============================================================================
-; SimpOS -- a 64-bit OS written in Assembly for x86-64 systems
-; Copyright (C) 2021 Peter Glen
-; Written: Fri 29.Oct.2021
-; =============================================================================
-
-; Macros
-
-%macro   SerMsg32 1
-    push    esi
-    mov     esi, %1
-    call    serial_out
-    pop     esi
-%endmacro
-
-%macro   SerMsg 1
-    push    rsi
-    mov     rsi, %1
-    call    serial_out
-    pop     rsi
-%endmacro
-
-%macro DumpMem 2
-    push    rcx
-    push    rsi
-    mov     rsi, %1
-    mov     rcx, %2
-    call    debug_dump_mem
-    pop     rsi
-    pop     rcx
-%endmacro
-
-%macro SerNum64  1
-    push    rax
-    mov     rax, %1
-    call    debug_dump_rax
-    pop     rax
-%endmacro
-
-%macro SerNum32  1
-    push    rax
-    mov     eax, %1
-    call    debug_dump_eax
-    pop     rax
-%endmacro
-
-%macro SerNum16  1
-    push    rax
-    mov     ax, %1
-    call    debug_dump_ax
-    pop     rax
-%endmacro
-
-%macro Space  0
-    SerMsg  space
-%endmacro
-
-%macro Newline 0
-    SerMsg  newline
-%endmacro
-
-; Initial Memory Map
-;
-; |Begin            |Loader   |Buffer   |Graphics  |Text   |BIOS    |End
-; ----------------------------------------------------------------------------
-; |0x100                                |A000      |B800   | 0xf000  | 0xffff
-;                   | 0x7C00  |0x8000
-; |256              | 31744   |32768    |40960     |45056  |61440    | 65535
-
-%define BUFF_ADDR   0x8000
-%define KERN_START  0x10000
 
 VBEModeInfoBlock: equ 0x5C00
-
 ; VESA
 ; Mandatory information for all VBE revisions
 VBEModeInfoBlock.ModeAttributes		equ VBEModeInfoBlock + 0	; DW - mode attributes
@@ -110,5 +38,3 @@ VBEModeInfoBlock.PhysBasePtr		equ VBEModeInfoBlock + 40	; DD - physical address 
 VBEModeInfoBlock.Reserved1		equ VBEModeInfoBlock + 44	; DD - Reserved - always set to 0
 VBEModeInfoBlock.Reserved2		equ VBEModeInfoBlock + 48	; DD - Reserved - always set to 0
 
-
-; EOF

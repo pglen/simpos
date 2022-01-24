@@ -12,23 +12,23 @@ message64:          db          'In 64 OK', 10, 0
 message:            db          'Pure64 OK', 10, 0
 memok:              db          'Mem OK', 10, 0
 msgmaps:              db        'Maps OK', 10, 0
-exc_str             db          'Exception ', 0
-mem_str             db          'Mem pages: ', 0
-
-;messageK:          db          'Kernel Jump OK', 10, 0
+exc_str             db          'Exc: ', 0
+mem_str             db          'Pages: ', 0
+nomem_str           db          'No mem. HLT', 0
 
 not_64:             db          'Not64bit', 10, 0
-not_acpi:           db          'Not  ACPI', 10, 0
+not_acpi:           db          'Not ACPI', 10, 0
+not_loaded:         db          'Kern sig', 10, 0
 
 start_rtc:          db          'RTC    OK', 10, 0
-paging_loaded:      db          'PagLOD OK', 10, 0
-paging_active:      db          'PagACT OK', 10, 0
+;paging_loaded:      db          'PagLOD OK', 10, 0
+;paging_active:      db          'PagACT OK', 10, 0
 
-pages_cr:           db          'pages_cr', 10, 0
-prot_loaded:        db          'Prot   OK', 10, 0
+pages_cr:           db          'pg_cr', 10, 0
+prot_loaded:        db          'Prot OK', 10, 0
 
 mesgini:            db          'Done INI', 10, 0
-keybirq             db          'KEY IRQ Pure', 10, 0
+keybirq             db          'KEY IRQ ', 10, 0
 
 space               db          ' ', 0
 ;newline             db          10, 0

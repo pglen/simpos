@@ -18,6 +18,7 @@
 %define DAP_SECTORS 64
 %define DAP_STARTSECTOR 16
 %define DAP_ADDRESS BUFF_ADDR
+;%define DAP_ADDRESS 0xe000
 %define DAP_SEGMENT 0x0000
 
 BITS 16
@@ -172,7 +173,7 @@ read_disk:
     call print_string_16
 
    ; Verify that the 2nd stage boot loader was read.
-    mov ax, [0x8006]
+    mov ax, [BUFF_ADDR + 6]
     cmp ax, 0x3436            ; Match against the Pure64 binary
     jne op_fail
 

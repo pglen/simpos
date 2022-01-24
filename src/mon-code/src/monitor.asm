@@ -1,9 +1,15 @@
 BITS 64
+
 ORG 0x001E0000
 
-%include 'libsimpos.inc'
-
 start:
+    jmp     realstart
+    nop
+    db      'SimpMON', 10, 0
+
+align  16
+
+realstart:
 
     mov     rsi, monstart
     call    string_length
@@ -357,6 +363,8 @@ help:
 %include 'mondata.asm'
 
 endd:
+
+%include 'libsimpos.inc'
 
 ;%assign num endd-start
 ;%warning "Code size" num org

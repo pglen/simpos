@@ -12,9 +12,9 @@ cmd=( qemu-system-x86_64
 	-device e1000,netdev=net0
 	-netdev user,id=net0
 # Amount of CPU cores
-	-smp 6
+	-smp 4
 # Amount of memory in Megabytes
-	-m 2048
+	-m 1048
 # Disk configuration
     -cdrom isodisk.iso
 	#-drive id=disk0,file="sys/disk.img",if=none,format=raw
@@ -34,3 +34,4 @@ cmd=( qemu-system-x86_64
 
 #execute the cmd string
 "${cmd[@]}"
+

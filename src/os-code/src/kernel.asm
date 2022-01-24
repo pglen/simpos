@@ -43,19 +43,41 @@ start:
     ; Estabilish stack
     ;mov   rsp, STACK
 
-    ;push rsi
-    ;push rcx
-    ;mov rsi, readymsg0
-    ;mov rcx, 5
+    ;mov   rax, rsp
+    ;call os_debug_dump_rax
+    ;mov rsi, newline
+    ;mov rcx, 2
     ;call b_output
-    ;pop rcx
-    ;pop rsi
+
+    push rsi
+    push rcx
+    mov rsi, readymsg0
+    mov rcx, 5
+    call b_output
+    pop rcx
+    pop rsi
+
+    mov ax, [0x100000 + KERNELSIZE + 3]      ; Payload starts right after the kernel
+    ;call os_debug_dump_ax
+    cmp ax, 0x6953
+    je  good_sig
+
+    mov rsi, badsig
+    mov rcx, 5
+    call b_output
+
+  good_sig:
+    ;mov rsi, 0x100000 + KERNELSIZE + 3
+    ;mov rcx, 32
+    ;call os_debug_dump_mem
 
     call init_64            ; After this point we are in a working 64-bit environment
 
     mov rsi, readymsg1
     mov rcx, 5
     call b_output
+
+    jmp xstart
 
     ; provoke exception -- test OK
     ;mov rsi, 0x1ffffffff
@@ -70,20 +92,21 @@ start:
     mov rcx, 5
     call b_output
 
-    jmp hdinit
+    ;jmp hdinit
 
 nopci:
     mov rsi, nopcimsg
     call b_output
 
 hdinit:
+
     call init_hdd            ; Initialize the disk
     mov rsi, readymsg3
     call b_output
 
-    call init_net            ; Initialize the network
-    mov rsi, readymsg4
-    call b_output
+    ;call init_net            ; Initialize the network
+    ;mov rsi, readymsg4
+    ;call b_output
 
     ;mov rsi, newline
     ;mov rcx, 2
@@ -169,6 +192,7 @@ print_pci:
     cmp  edi, 4
     jb   again_pci_bus
 
+xstart:
     ; Sign on
     mov rsi, readymsg
     ;mov rcx, 11
@@ -179,6 +203,9 @@ print_pci:
     cmp qword [rsi], 0x00               ; Is there a payload after the kernel?
     jne  ap_copy                        ; If not, skip to ap_clear
 
+    ;call os_debug_dump_mem
+    ;mov rsi, 0x100000 + KERNELSIZE      ; Payload starts right after the kernel
+
     push rsi
     mov rsi, noload_msg
     mov rcx, 15
@@ -188,14 +215,15 @@ print_pci:
 
   ap_copy:
 
+    cld
     mov rdi, 0x1E0000
     mov rcx, 2048
     rep movsq            ; Copy 16384 bytes
 
-    ;push rsi
-    ;mov rsi, copied_mon
-    ;call b_output
-    ;pop  rsi
+    push rsi
+    mov rsi, copied_mon
+    call b_output
+    pop  rsi
 
     ; Set the payload to run
     mov qword [os_ClockCallback], init_process
@@ -203,8 +231,8 @@ print_pci:
     ; Fall through to ap_clear as align fills the space with No-Ops
     ; At this point the BSP is just like one of the AP's
 
-    mov rsi, call_init
-    call b_output
+    ;mov rsi, call_init
+    ;call b_output
 
     ;mov rsi, 0x100000
     ;mov rcx, 128
@@ -376,7 +404,16 @@ b_dummy:
 %include "interrupt.asm"
 %include "kernvar.asm"       ; Include this last to keep the read/write variables away from the code
 
-times KERNELSIZE-($-$$) db 0        ; Set the compiled kernel binary to at least this size in bytes
+;times KERNELSIZE-($-$$) db 0        ; Set the compiled kernel binary to at least this size in bytes
+
+padd:
+; Pad to an even KB file
+times KERNELSIZE-($-$$) db 0x90
+
+endd:
+
+;%assign num endd-padd
+;%warning "padding available" num
 
 ; =============================================================================
 ; EOF

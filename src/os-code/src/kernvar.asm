@@ -16,6 +16,7 @@ readymsg1:		db            'x64  ', 0
 readymsg2:		db            'pcz  ', 0
 readymsg3:		db            'ide  ', 0
 readymsg4:		db            'net  ', 0
+badsig:         db            'Bad sig', 0
 
 colonspace:     db            ': ', 0
 colon:          db            ':', 0
