@@ -3,7 +3,9 @@
 export EXEC_DIR="$PWD"
 export OUTPUT_DIR="$EXEC_DIR/sys"
 
-#echo Copying apps ...
+echo "Copying apps ... ()"
+
+#exit
 
 saveapp() {
     ../src/BMFS/bin/bmfs disk.img create $1 2

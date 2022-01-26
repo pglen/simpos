@@ -14,7 +14,7 @@ cmd=( qemu-system-x86_64
 # Amount of CPU cores
 	-smp 4
 # Amount of memory in Megabytes
-	-m 1048
+	-m 4048
 # Disk configuration
     -cdrom isodisk.iso
 	#-drive id=disk0,file="sys/disk.img",if=none,format=raw

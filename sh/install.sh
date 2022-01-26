@@ -15,6 +15,7 @@ else
 fi
 
 dd if=mbr.sys of=disk.img conv=notrunc > /dev/null 2>&1
+#dd if=second.sys of=disk.img bs=512 seek=1 conv=notrunc > /dev/null 2>&1
 dd if=software.sys of=disk.img bs=512 seek=16 conv=notrunc > /dev/null 2>&1
 
 cd $EXEC_DIR

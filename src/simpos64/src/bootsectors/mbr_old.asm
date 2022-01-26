@@ -43,7 +43,7 @@ entry:
     mov si, msg_Init
     call print_string_16
 
-%if 1
+%if 0
 
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
@@ -99,7 +99,7 @@ memmapend:
 
 %endif
 
-%if 1
+%if 0
 
 ; ------------------------------------------------------------------------
 ; Enable the A20 gate
@@ -121,7 +121,7 @@ check_A20:
 
 %endif
 
-    ;wait_for_user:
+        ;wait_for_user:
     ;    mov  cx, 0x3ff
     ;  wait_some:
     ;    push cx
@@ -131,12 +131,129 @@ check_A20:
     ;    pop  cx
     ;    loop wait_some
 
+    ;mov si, msg_13
+    ;call print_string_16
+
+    ;mov     al, 0x32
+    ;call    print_char_16
+
+    ;mov     al, 0x32
+    ;call    print_num_16
+
+    ;mov     al, [DriveNumber]
+    ;call    print_num_16
+
+    mov     si, msg_EXT
+    call    print_string_16
+
+    jmp ext_ok
+
+    mov ah,41h
+    mov bx, 0xaa55
+    mov dl,DriveNumber
+    int 13h
+    jnc  ext_ok
+    cmp  bx, 0x55aa
+    je   ext_ok
+
+    mov     si, msg_ERR
+    call    print_string_16
+    jmp     halt
+
+ext_ok:
+
+    mov     si, msg_OK
+    call    print_string_16
+
+    mov     di, 3
+    mov     si, msg_Read
+    call    print_string_16
+    jmp     read
+
+reset_disk:
+        mov     ah,al
+        call    print_num_16
+
+        mov     al, ' '
+        call    print_char_16
+
+        mov si, msg_TRY
+        call print_string_16
+        mov ah,0h              ;resetting the drive to the first sector
+        mov dl,DriveNumber
+        int 13h
+
+read:
+        cmp di, 0
+        je  fail_read
+
+        dec di
+
+       ;mov ax,1000h           ;reading sectors into memory address 0x1000:0
+       ;mov es,ax
+       ;xor bx,bx
+
+       ; Mark it with ...
+       mov  byte [0x8000],   'b'
+       mov  byte [0x8000+1], 'e'
+       mov  byte [0x8000+2], 'e'
+       mov  byte [0x8000+3], 'f'
+       mov  byte [0x8000+4], ' '
+
+       mov bx, 0x8000         ; address of secondary loader
+       mov ah,02h
+       mov al,01h             ;reading 1 sector
+
+       mov ch,01h             ;form cylinder #1
+       mov cl,02h             ;starting from sector #2
+       mov dh,01h             ;using head #1
+
+       mov dl,DriveNumber     ;on booting drive
+
+       int 13h
+       jc  reset_disk
+       jmp read_ok
+
+  fail_read:
+
+    mov si, msg_ERR
+    call print_string_16
+    jmp  halt
+
+ read_ok:
+
     mov si, msg_OK
     call print_string_16
 
+    mov si, msg_Sig
+    call print_string_16
+
+    ;cmp  word [0x6000 + 4], 0x
+
+    mov si, 0x8000
+    call    print_string_16
+
+    mov si, msg_OK
+    call print_string_16
+
+
+    jmp halt
+
+    ;mov ah, 0x41          ; Int 13h/AH=41h: Check if extensions present
+    ;mov bx, 0x55aa
+    ;int 0x13
+    ;jc  op_fail2      ; CF set - no extensions available for drive
+    ;cmp bx, 0xaa55        ; Is BX 0xaa55?
+    ;jnz     op_fail
+
+    ;mov ah, 0x00                 ; Reset
+    ;mov dl, [DriveNumber]        ; http://www.ctyme.com/intr/rb-0708.htm
+    ;int     0x13
+
 read_disk:
 
-%if 1
+
+%if 0
     mov si, msg_Read
     call print_string_16
 
@@ -163,17 +280,17 @@ read_disk:
 %endif
 
 
-%if 1
+%if 0
 set_video:
 
     mov si, msg_Video
     call print_string_16
 
   ; Wait before setting video
-  ;mov ecx, 0x2fffffff
-  ;xxx:
-  ;  dec ecx
-  ;  jnz xxx
+  mov ecx, 0x2fffffff
+  xxx:
+    dec ecx
+    jnz xxx
 
     mov edi, VBEModeInfoBlock    ; VBE data will be stored at this address
     mov ax, 0x4F01            ; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
@@ -225,8 +342,6 @@ halt:
     jmp halt
 ;------------------------------------------------------------------------------
 
-%if 0
-
 print_char_16:              ; Output char in al
     mov ah,0xe
     int 0x10                ; Output the character
@@ -246,8 +361,8 @@ print_num_16:               ; Output value in al
     and al,0xf
     add al, 0x30
     int 0x10                ; Output the character
+
     ret
-%endif
 
 ;------------------------------------------------------------------------------
 ; 16-bit function to output a string to the serial port
@@ -290,8 +405,8 @@ msg_Video       db "VGA ", 0
 msg_OK          db "OK ", 0
 msg_ERR         db "ERR ", 0
 
-;msg_TRY         db "TRY ", 0
-;msg_EXT         db "Ext ", 0
+msg_TRY         db "TRY ", 0
+msg_EXT         db "Ext ", 0
 
 padd:
 times 446-$+$$ db 0

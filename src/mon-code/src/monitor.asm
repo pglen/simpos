@@ -366,6 +366,9 @@ endd:
 
 %include 'libsimpos.inc'
 
+times 5630-$+$$ db 0
+sign dw 0xAA55
+
 ;%assign num endd-start
 ;%warning "Code size" num org
 

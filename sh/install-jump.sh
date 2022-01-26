@@ -7,7 +7,7 @@ JMP=/dev/sdd1
 export OUTPUT_DIR="$PWD/sys"
 cd "$OUTPUT_DIR"
 echo Installing OS image to jump drive $JMP ...
-echo "Verified? [y/n] (Ctrl-C to stop)"
+echo "This can cause harm ... Verified? [y/n] (Ctrl-C to stop)"
 read Y
 
 if [ "$Y" != "y" -a  "$Y" != "Y"] ; then

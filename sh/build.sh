@@ -79,6 +79,7 @@ build_dir "src/BMFS" || exit 1
 #echo Copying components ...
 copy_file "src/simpos64/bin/isombr.sys" "${OUTPUT_DIR}/isombr.sys"
 copy_file "src/simpos64/bin/mbr.sys" "${OUTPUT_DIR}/mbr.sys"
+copy_file "src/simpos64/bin/second.sys" "${OUTPUT_DIR}/second.sys"
 copy_file "src/simpos64/bin/multiboot.sys" "${OUTPUT_DIR}/multiboot.sys"
 copy_file "src/simpos64/bin/multiboot2.sys" "${OUTPUT_DIR}/multiboot2.sys"
 copy_file "src/simpos64/bin/pure64.sys" "${OUTPUT_DIR}/pure64.sys"

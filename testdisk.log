@@ -1,0 +1,40 @@
+
+
+Mon Jan 24 19:15:28 2022
+Command line: TestDisk
+
+TestDisk 7.1, Data Recovery Utility, July 2019
+Christophe GRENIER <grenier@cgsecurity.org>
+https://www.cgsecurity.org
+OS: Linux, kernel 5.13.0-25-generic (#26-Ubuntu SMP Fri Jan 7 15:48:31 UTC 2022) x86_64
+Compiler: GCC 9.2
+ext2fs lib: 1.46.3, ntfs lib: libntfs-3g, reiserfs lib: none, ewf lib: none, curses lib: ncurses 6.1
+/dev/sda: LBA, HPA, LBA48, DCO support
+/dev/sda: size       3907029168 sectors
+/dev/sda: user_max   3907029168 sectors
+/dev/sda: native_max 3907029168 sectors
+/dev/sda: dco        3907029168 sectors
+/dev/sdb: LBA, LBA48 support
+/dev/sdb: size       1953525168 sectors
+/dev/sdb: user_max   1953525168 sectors
+/dev/sdc: LBA, HPA, LBA48 support
+/dev/sdc: size       468862128 sectors
+/dev/sdc: user_max   468862128 sectors
+/dev/sdc: native_max 468862128 sectors
+Warning: can't get size for Disk /dev/mapper/control - 0 B - 0 sectors, sector size=512
+Warning: can't get size for Disk /dev/loop8 - 0 B - 0 sectors, sector size=512
+Hard disk list
+Disk /dev/sda - 2000 GB / 1863 GiB - CHS 243201 255 63, sector size=512 - Hitachi HDS722020ALA330, S/N:JK11A8B9JVR3HF, FW:JKAOA3MA
+Disk /dev/sdb - 1000 GB / 931 GiB - CHS 121601 255 63, sector size=512 - WDC WDS100T2G0A-00JH30, S/N:201615800719, FW:411040WD
+Disk /dev/sdc - 240 GB / 223 GiB - CHS 29185 255 63, sector size=512 - KINGSTON SA400S37240G, S/N:50026B768324735A, FW:S1Z40102
+Disk /dev/loop0 - 58 MB / 55 MiB - 113680 sectors (RO), sector size=512
+Disk /dev/loop1 - 58 MB / 55 MiB - 113640 sectors (RO), sector size=512
+Disk /dev/loop2 - 116 MB / 110 MiB - 227144 sectors (RO), sector size=512
+Disk /dev/loop3 - 64 MB / 61 MiB - 126632 sectors (RO), sector size=512
+Disk /dev/loop4 - 45 MB / 43 MiB - 88616 sectors (RO), sector size=512
+Disk /dev/loop5 - 64 MB / 61 MiB - 126784 sectors (RO), sector size=512
+Disk /dev/loop6 - 654 MB / 623 MiB - 1277392 sectors (RO), sector size=512
+Disk /dev/loop7 - 44 MB / 42 MiB - 86368 sectors (RO), sector size=512
+
+
+TestDisk exited normally.

@@ -15,7 +15,7 @@
 
 %include "../../../common/common.inc"
 
-%define DAP_SECTORS 4
+%define DAP_SECTORS 16
 ;%define DAP_STARTSECTOR 0x18
 %define DAP_STARTSECTOR 0x1c
 %define DAP_ADDRESS BUFF_ADDR
@@ -99,8 +99,8 @@ memmapend:
     mov ecx, 8
     rep stosd
 
-    mov si, msg_Init2
-    call print_string_16
+    ;mov si, msg_Init2
+    ;call print_string_16
 
 ; Enable the A20 gate
 set_A20:
@@ -156,7 +156,7 @@ check_A20:
     jmp halt
 
 wait_disp:
-    ;hlt                         ; this was needed for the display to settle
+    hlt                         ; this was needed for the display to settle
 
     mov si, msg_OK
     call print_string_16
@@ -170,12 +170,6 @@ copy_to_e000:
     ;mov di, 0xe000
     ;mov cx, 4096+8192 ;+4096+8192
     ;mov cx, 4096
-    ;rep movsb
-
-    ; copy in two stages
-    ;mov si, 0x7C00+0x200+4096
-    ;mov di, 0xe000 + 4096
-    ;mov cx, 8192
     ;rep movsb
 
     ;mov si, msg_OK
@@ -197,8 +191,6 @@ copy_to_e000:
     mov si, msg_Prot
     call print_string_16
 
-    ;call    print_long
-
 msg:
     mov si, msg_OK
     call print_string_16
@@ -211,10 +203,10 @@ msg:
     or al, 0x01              ; Set protected mode bit
     mov cr0, eax
 
- ;  jmp  no_prefetch
- ;  nop
- ;  nop
- no_prefetch:
+   jmp  no_prefetch
+   nop
+
+  no_prefetch:
 
 align 16
 ;BITS 32
@@ -304,8 +296,11 @@ sign dw 0xAA55
 ; ------------------------------------------------------------------------
 ; This is padded at the end to load sys stuff
 
+;BITS 32
+
 added:
 
+align 16
 cont_exec:
 
     ; Read the 2nd stage boot loader into memory.
@@ -319,8 +314,8 @@ cont_exec:
     ;jne  cd_err
 
     mov esi, DAP_ADDRESS
-    mov ecx, 600
-    call debug_dump_mem
+    ;mov ecx, 600
+    ;call debug_dump_mem
 
     ;mov si, path_table_msg
     ;call print_string_16
@@ -339,6 +334,9 @@ cont_exec:
     ;mov ecx, 200
     ;call debug_dump_mem
 
+    mov si, msg_long
+    mov  cx, 100
+    call print_string_16
     ret
 
 ;  ax has sector number
@@ -360,11 +358,6 @@ read_disk:
     ;mov ecx, 2000
     ;call debug_dump_mem
 
-    ret
-
-print_long:
-    mov si, msg_long
-    call print_string_16
     ret
 
 cd_err:
@@ -633,10 +626,9 @@ newline                 db  10, 0
 ;paddx:
 ;    times 0x5fff db 'a'
 
+path_table_msg  db  "Path table location: ", 0
 msg_badcd   db 10, "Not a CD image", 10, 0
 msg_long    db 10, "Long message from el torrito boot sector", 10, 0
-path_table_msg  db  "Path table location: ", 0
-
 
 ;%include "modeinfo.inc"
 
