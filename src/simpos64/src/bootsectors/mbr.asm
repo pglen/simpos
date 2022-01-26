@@ -16,7 +16,8 @@
 %include "../../../common/common.inc"
 
 %define DAP_SECTORS 64
-%define DAP_STARTSECTOR 16
+%define DAP_STARTSECTOR 16 + 2048
+;%define DAP_STARTSECTOR 16
 %define DAP_ADDRESS BUFF_ADDR
 ;%define DAP_ADDRESS 0xe000
 %define DAP_SEGMENT 0x0000
@@ -162,7 +163,6 @@ read_disk:
     call print_string_16
 %endif
 
-
 %if 1
 set_video:
 
@@ -170,10 +170,10 @@ set_video:
     call print_string_16
 
   ; Wait before setting video
-  ;mov ecx, 0x2fffffff
-  ;xxx:
-  ;  dec ecx
-  ;  jnz xxx
+  mov ecx, 0x1fffffff
+  xxx:
+    dec ecx
+    jnz xxx
 
     mov edi, VBEModeInfoBlock    ; VBE data will be stored at this address
     mov ax, 0x4F01            ; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
@@ -182,7 +182,9 @@ set_video:
     ;0x4115 is 800x600x24bit, 0x412E should be 32bit
     ; 0x4118 is 1024x768x24bit, 0x4138 should be 32bit
     ; 0x411B is 1280x1024x24bit, 0x413D should be 32bit
-     mov cx, 0x118            ; 1024x768x24
+    ; mov cx, 0x118            ; 1024x768x24
+
+    mov cx, 0x4112            ; Put your desired mode here
     ;mov cx, 0x4118            ; Put your desired mode here
     ;mov cx, 0x411B            ; Put your desired mode here
     ;mov cx, 0x4138             ; Put your desired mode here
@@ -191,10 +193,10 @@ set_video:
     mov bx, cx                ; Mode is saved to BX for the set command later
     int 0x10
     cmp ax, 0x004F            ; Return value in AX should equal 0x004F if command supported and successful
-    ;jne op_fail
+    jne op_fail
 
-    ;cmp byte [VBEModeInfoBlock.BitsPerPixel], 24    ; Make sure this matches the number of bits for the mode!
-    ;jne op_fail            ; If set bit mode was unsuccessful then bail out
+    cmp byte [VBEModeInfoBlock.BitsPerPixel], 24    ; Make sure this matches the number of bits for the mode!
+    jne op_fail            ; If set bit mode was unsuccessful then bail out
 
     or bx, 0x4000            ; Use linear/flat frame buffer model (set bit 14)
     mov ax, 0x4F02            ; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
@@ -282,10 +284,10 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF    ; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF    ; 32-bit data descriptor
 gdt32_end:
 
-msg_Init        db "Ini ", 0
-msg_Read        db "Read ", 0
-msg_Sig         db "Sig ", 0
-msg_Video       db "VGA ", 0
+msg_Init        db "I ", 0
+msg_Read        db "R ", 0
+msg_Sig         db "Sg ", 0
+msg_Video       db "V ", 0
 
 msg_OK          db "OK ", 0
 msg_ERR         db "ERR ", 0
