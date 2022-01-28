@@ -68,9 +68,12 @@
 ; |256              | 31744   |32768    |40960     |45056  |61440    | 65535
 
 %define BUFF_ADDR   0x8000
+%define SEC_ADDR    0x1000
 %define KERN_START  0x10000
 
 VBEModeInfoBlock: equ 0x5C00
+GetInfoBlock    equ   0x5000
+
 
 ; VESA
 ; Mandatory information for all VBE revisions
