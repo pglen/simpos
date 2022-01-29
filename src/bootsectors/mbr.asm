@@ -10,7 +10,7 @@
 
 ; Default location of the second stage boot loader is the next two sectors
 
-%include "../../../common/common.inc"
+%include "../common/common.inc"
 
 %define DAP_SECTORS 2
 %define DAP_STARTSECTOR 1 + 2048

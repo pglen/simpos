@@ -7,38 +7,40 @@
 
 align 16
 
-input:
+input_string:
+
     push rdi
     push rdx    		      ; Counter to keep track of max accepted characters
     push rax
 
     mov rdx, rcx    		  ; Max chars to accept
     xor ecx, ecx    		  ; Offset from start
+    mov byte [rdi], 0         ; Clear string
 
- input_more:
+ .input_more:
     mov al, '_'
     call output_char
     call dec_cursor
     call [sys_input]
-    jnc input_halt    		    ; No key entered... halt until an interrupt is received
+    jnc .input_halt    		    ; No key entered... halt until an interrupt is received
     cmp al, 0x1C    		  ; If Enter key pressed, finish
-    je input_done
+    je .input_done
     cmp al, 0x0E    		  ; Backspace
-    je input_backspace
+    je .input_backspace
     cmp al, 32    		        ; In ASCII range (32 - 126)?
-    jl input_more
+    jl .input_more
     cmp al, 126
-    jg input_more
+    jg .input_more
     cmp rcx, rdx    		; Check if we have reached the max number of chars
-    je input_more    		; Jump if we have (should beep as well)
+    je .input_more    		; Jump if we have (should beep as well)
     stosb    			    ; Store AL at RDI and increment RDI by 1
     inc rcx    			  ; Increment the counter
     call output_char    	; Display char
-    jmp input_more
+    jmp .input_more
 
- input_backspace:
+ .input_backspace:
     test rcx, rcx    		; backspace at the beginning? get a new char
-    jz input_more
+    jz .input_more
     mov al, ' '    		; 0x20 is the character for a space
     call output_char    	; Write over the last typed character with the space
     call dec_cursor    		; Decrement the cursor again
@@ -46,13 +48,13 @@ input:
     dec rdi    			; go back one in the string
     mov byte [rdi], 0x00    	; NULL out the char
     dec rcx    			; decrement the counter by one
-    jmp input_more
+    jmp .input_more
 
- input_halt:
+ .input_halt:
     hlt    			; Halt until another keystroke is received
-    jmp input_more
+    jmp .input_more
 
- input_done:
+ .input_done:
     xor al, al
     stosb    			; We NULL terminate the string
     mov al, ' '
@@ -166,6 +168,7 @@ output_mon:
     pop rdi
     pop rcx
     ret
+
 ; -----------------------------------------------------------------------------
 
 

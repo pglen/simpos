@@ -149,9 +149,9 @@ poll:
     mov rsi, prompt
     call output_mon
     mov rdi, temp_string
-    mov byte [rdi], 0
     mov rcx, 100
-    call input
+    call input_string
+
     ; TODO clear leading/trailing spaces to sanitize input
 
     ;mov rsi, temp_string                ; show command on serial
@@ -223,26 +223,53 @@ exec:
 
 dir:
     mov rsi, dirmsg
-    mov rdx, 1
+    ;mov rdx, 1
     call output_mon
+
     mov rdi, temp_string
     mov rsi, rdi
-    mov rax, 1
+    mov rax, 2048*512/4096 + 1
     mov rcx, 1
     mov rdx, 0
     call [sys_disk_read]        ; Load the 4K BMFS file table
+    jnc     read_ok
 
-    ;push    rsi
-    ;push    rcx
-    ;mov rsi, dirdump
-    ;call output_mon
-    ;mov     rsi, temp_string
-    ;mov     rcx, 1280
-    ;call    mon_debug_dump_mem
-    ;pop     rcx
-    ;pop     rsi
+    mov rsi, message_diskread
+    call output_mon
+    jmp poll
+
+read_ok:
+    mov     ax, 3
+    mov     rsi, temp_string
+
+ .read_ok2:
+
+    push    rax
+
+    ; dump memory
+    mov     rcx, 500
+    call    mon_debug_dump_mem
+    add     rsi, 500
+
+    mov     rdi, temp_string2
+    call    input_string
+
+    push    rsi
+    mov     rsi, temp_string2
+    call    output_mon
+    pop     rsi
+
+    pop     rax
+
+    dec     ax
+    cmp     ax, 0
+    ja      .read_ok2
+
+    ; done dumping
 
     mov rax, 1
+    mov     rsi, temp_string
+
  dir_next:
     cmp byte [rsi], 0        ; 0 means we're at the end of the list
     je dir_end
@@ -319,7 +346,7 @@ load:
     mov rdi, temp_string
     mov rsi, rdi
     mov rcx, 2
-    call input
+    call input_string
     call string_to_int
     sub rax, 1            ; Files are indexed from 0
     push rax            ; Save the file #

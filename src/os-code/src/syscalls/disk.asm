@@ -9,12 +9,16 @@
 
 ; -----------------------------------------------------------------------------
 ; b_disk_read -- Read sectors from the disk
-; IN:	RAX = Starting sector
+; IN:
+;   RAX = Starting sector
 ;	RCX = Number of sectors to read
 ;	RDX = Disk
 ;	RDI = Memory location to store data
+;
 ; OUT:	RCX = Number of sectors read
+
 ;	All other registers preserved
+
 b_disk_read:
 	push rdi
 	push rcx
@@ -45,6 +49,7 @@ b_disk_read_done:
 	ret
 
 b_disk_read_fail:
+
 	pop rax
 	pop rcx
 	pop rdi

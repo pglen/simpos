@@ -15,13 +15,19 @@ message_run:        db 'Running: ', 0
 message_load:       db 'Enter file number: ', 0
 message_loaded:     db 'Loaded. ', 13, 0
 message_unknown:    db 'Unknown command', 13, 0
+
+; (you will be prompted for the program number)
+
 message_help:       db 'Available commands:', 13
                     db ' dir  - Show programs currently on disk', 13
                     db ' run - Load and execute program', 13
-                    db ' load - Load a program to memory (you will be prompted for the program number)', 13
+                    db ' load - Load a program to memory', 13
                     db ' exec - Run the program currently in memory', 13
                     db ' reboot - Reboot system', 13
                     db ' ver  - Show the system version', 13, 0
+
+message_diskread    db  'Error on disk read', 13, 0
+
 
 command_clear:      db 'clear', 0
 command_reboot:     db 'reboot', 0
@@ -90,8 +96,10 @@ hextable:           db '0123456789ABCDEF', 0
 colon:              db ':', 0
 os_debug_dump_mem_chars: db '0x: ', 0
 
-temp_string:        db 0
 temp_string1: times 50 db 0
 temp_string2: times 50 db 0
+
+; Reading here will extend beyond mem
+temp_string:        db 0
 
 ; EOF

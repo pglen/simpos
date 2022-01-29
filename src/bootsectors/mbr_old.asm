@@ -13,7 +13,7 @@
 ; Default location of the second stage boot loader. This loads
 ; 32 KiB from sector 16 into memory at 0x8000
 
-%include "../../../common/common.inc"
+%include "../common/common.inc"
 
 %define DAP_SECTORS 64
 %define DAP_STARTSECTOR 16

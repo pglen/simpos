@@ -13,7 +13,7 @@
 ; Default location of the second stage boot loader. This loads
 ; 32 KiB from sector 16 into memory at 0x8000
 
-%include "../../../common/common.inc"
+%include "../common/common.inc"
 
 %define DAP_SECTORS 64
 %define DAP_STARTSECTOR 19 + 2048       ; 3 for (mbr + sec) (16 + 1) for FS
@@ -80,10 +80,10 @@ read_disk:
     mov si, msg_OK
     call print_string_16
 
-    mov     ax, 0xa00
-    call    wait_for_user
-    call    set_video
+    ;mov     ax, 0xa00
+    ;call    wait_for_user
 
+    call    set_video
 
 jump_to_32:
     ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
@@ -400,7 +400,7 @@ gdt32_end:
 
 padd:
 
-times 1022-$+$$ db 0
+times 1534-$+$$ db 0
 sign dw 0xAA55
 endd:
 
