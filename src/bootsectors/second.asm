@@ -16,7 +16,7 @@
 %include "../common/common.inc"
 
 %define DAP_SECTORS 64
-%define DAP_STARTSECTOR 19 + 2048       ; 3 for (mbr + sec) (16 + 1) for FS
+%define DAP_STARTSECTOR 24 + 2048       ; 4 for (mbr + second) 4 for null (16) for FS
 %define DAP_ADDRESS BUFF_ADDR
 %define DAP_SEGMENT 0x0000
 
