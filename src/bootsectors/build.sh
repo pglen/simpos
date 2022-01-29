@@ -2,6 +2,7 @@
 
 mkdir -p bin
 
+nasm mpr.asm -o ./bin/mpr.sys || exit 1
 nasm isombr.asm -o ./bin/isombr.sys || exit 1
 nasm mbr.asm -o ./bin/mbr.sys  || exit 1
 nasm second.asm -o ./bin/second.sys  || exit 1

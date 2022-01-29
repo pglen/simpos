@@ -32,55 +32,27 @@ align   4
 
 start:
 
-    mov  [DriveNumber], dl
+    ; re-save drive number
+    mov     [DriveNumber], dl
 
-    mov si, msg_Init
-    call print_string_16
+    mov     si, msg_Init
+    call    print_string_16
 
-    call  do_e820
-    call  set_A20
-
-    mov si, msg_OK
-    call print_string_16
-
-read_disk:
-
-    mov si, msg_Read
-    call print_string_16
-
-    ; Read the pure64 boot loader into memory.
-    mov     ah, 0x42                ; Extended Read
-    ;mov     al, 0
-    mov     dl, [DriveNumber]        ; http://www.ctyme.com/intr/rb-0708.htm
-    mov     si, DAP
-    int     0x13
-    jc      op_fail
+    call    do_e820
+    call    set_A20
 
     mov si, msg_OK
-    call print_string_16
+    call    print_string_16
 
-    mov si, msg_Sig
-    call print_string_16
+    ; Do we have the right processor?
+    call    check_64
+    call    read_disk
+    call    check_sig
 
-    ;mov al, [BUFF_ADDR + 6]
-    ;call print_char_16
-    ;mov al, [BUFF_ADDR + 7]
-    ;call print_char_16
-    ;mov al, [BUFF_ADDR + 8]
-    ;call print_char_16
-    ;mov al, [BUFF_ADDR + 9]
-    ;call print_char_16
+    mov     si, newline
+    call    print_string_16
 
-    ; Verify that the 2nd stage boot loader was read.
-    mov ax, [BUFF_ADDR + 6]
-    cmp ax, 0x3436            ; Match against the Pure64 binary
-    mov  ah, 0
-    jne op_fail
-
-    mov si, msg_OK
-    call print_string_16
-
-    ;mov     ax, 0xa00
+    ;mov     ax, 0x200
     ;call    wait_for_user
 
     call    set_video
@@ -96,11 +68,15 @@ jump_to_32:
     jmp 8:BUFF_ADDR         ; Jump to 32-bit protected mode
 
 ;------------------------------------------------------------------------------
-; No further
+; This far, but no further
 
 halt:
+   mov      si, msg_Halt
+   call     print_string_16
+
+  .halt2:
     hlt
-    jmp halt
+    jmp .halt2
 
 DAP:
     db 0x10
@@ -110,36 +86,15 @@ DAP:
     dw DAP_SEGMENT
     dq DAP_STARTSECTOR
 
-align 4
-;------------------------------------------------------------------------------
-; 16-bit function to output a string to the serial port
-; IN:    SI - Address of start of string
-print_string_16:            ; Output string in SI to screen
-    pusha
-    mov bx, 0
-    mov dx, 0                ; Port 0
- .repeat:
-    mov ah, 0x01            ; Serial - Write character to port
-    lodsb                    ; Get char from string
-    cmp al, 0
-    je .done                ; If char is zero, end of string
-    int 0x14                ; Output the character
-    mov ah,0xe
-    int 0x10                ; Output the character
-    jmp short .repeat
- .done:
-    popa
-    ret
-;------------------------------------------------------------------------------
-
 msg_Init        db "In second stage ", 0
-msg_Read        db "Read 32 bit code ", 0
+msg_Read        db "Reading second stage ", 0
 msg_Sig         db "Signature check ", 0
-msg_Video       db "Set SVGA Mode", 0
+msg_Video       db "Set SVGA Mode ", 0
+msg_Halt        db "Sytem Halted ...", 0
 
 msg_Viderr      db "Error on setting video", 0
-
-msg_OK          db "OK ", 10, 13, 0
+msg_OK          db "OK ", 0
+newline         db 10, 13, 0
 msg_ERR         db "ERR", 10, 13, 0
 
 ;padd:
@@ -211,9 +166,32 @@ memmapend:
     rep stosd
     ret
 
+check_64:
+
+    push    eax
+    push    ebx
+    mov     EAX, 0x80000001
+    cpuid
+    and     edx, 1<<29
+    cmp     edx,0
+    pop     eax
+    pop     edx
+    jg      .got_64
+
+    ;SerMsg32  not_64
+
+    ; Also show on display
+    mov     esi, not_64
+    call    print_string_16
+
+    jmp halt
+
+ .got_64:
+    ret
 
 ; ------------------------------------------------------------------------
 ; Enable the A20 gate
+
 set_A20:
     in al, 0x64
     test al, 0x02
@@ -229,6 +207,49 @@ set_A20:
 
     ;mov si, msg_OK
     ;call print_string_16
+    ret
+
+
+; ------------------------------------------------------------------------
+; read disk into buffer
+
+read_disk:
+
+    mov     si, msg_Read
+    call    print_string_16
+
+    ; Read the pure64 boot loader into memory.
+    mov     ah, 0x42                ; Extended Read
+    mov     dl, [DriveNumber]        ; http://www.ctyme.com/intr/rb-0708.htm
+    mov     si, DAP
+    int     0x13
+    jc      op_fail
+
+    mov     si, msg_OK
+    call    print_string_16
+    ret
+
+; ------------------------------------------------------------------------
+; Check for signature
+
+check_sig:
+
+    mov si, msg_Sig
+    call print_string_16
+
+    ; test
+    ;mov al, [BUFF_ADDR + 6]
+    ;call print_char_16
+    ;mov al, [BUFF_ADDR + 7]
+    ;call print_char_16
+
+    ; Verify that the 2nd stage boot loader was read.
+    cmp word [BUFF_ADDR + 6], 0x3436            ; Match against the Pure64 binary
+    ;mov  ah, 0
+    jne op_fail
+
+    mov si, msg_OK
+    call print_string_16
     ret
 
 ; ------------------------------------------------------------------------
@@ -255,8 +276,8 @@ wait_for_user:
 
 set_video:
 
-    mov si, msg_Video
-    call print_string_16
+    mov     si, msg_Video
+    call    print_string_16
 
     ;mov edi, GetInfoBlock
     ;mov byte [edi],   'V'
@@ -383,6 +404,30 @@ print_num_16:               ; Output value in al
     add al, 0x30
     int 0x10                ; Output the character
     ret
+
+;------------------------------------------------------------------------------
+; 16-bit function to output a string to the serial port
+; IN:    SI - Address of start of string
+print_string_16:            ; Output string in SI to screen
+    pusha
+    mov bx, 0
+    mov dx, 0                ; Port 0
+ .repeat:
+    mov ah, 0x01            ; Serial - Write character to port
+    lodsb                    ; Get char from string
+    cmp al, 0
+    je .done                ; If char is zero, end of string
+    int 0x14                ; Output the character
+    mov ah,0xe
+    int 0x10                ; Output the character
+    jmp short .repeat
+ .done:
+    popa
+    ret
+;------------------------------------------------------------------------------
+
+hextable  		        db '0123456789ABCDEF'
+not_64                  db "This OS needs a 64 bit processor.", 10, 13, 0
 
 align 16
 GDTR32:                             ; Global Descriptors Table Register

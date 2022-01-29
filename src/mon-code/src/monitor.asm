@@ -228,7 +228,7 @@ dir:
 
     mov rdi, temp_string
     mov rsi, rdi
-    mov rax, 2048*512/4096 + 1
+    mov rax, 2048*512/4096
     mov rcx, 1
     mov rdx, 0
     call [sys_disk_read]        ; Load the 4K BMFS file table
@@ -239,35 +239,32 @@ dir:
     jmp poll
 
 read_ok:
-    mov     ax, 3
+    ;mov     ax, 3
     mov     rsi, temp_string
-
  .read_ok2:
-
-    push    rax
-
-    ; dump memory
+    ;push    rax
+    ;
+    ;; dump memory
     mov     rcx, 500
     call    mon_debug_dump_mem
-    add     rsi, 500
-
-    mov     rdi, temp_string2
-    call    input_string
-
-    push    rsi
-    mov     rsi, temp_string2
-    call    output_mon
-    pop     rsi
-
-    pop     rax
-
-    dec     ax
-    cmp     ax, 0
-    ja      .read_ok2
-
+    ;add     rsi, 500
+    ;
+    ;mov     rdi, temp_string2
+    ;call    input_string
+    ;
+    ;push    rsi
+    ;mov     rsi, temp_string2
+    ;call    output_mon
+    ;pop     rsi
+    ;
+    ;pop     rax
+    ;
+    ;dec     ax
+    ;cmp     ax, 0
+    ;ja      .read_ok2
     ; done dumping
 
-    mov rax, 1
+    ;mov     rax, 1
     mov     rsi, temp_string
 
  dir_next:

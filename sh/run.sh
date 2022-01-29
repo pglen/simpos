@@ -4,6 +4,7 @@
 cmd=( qemu-system-x86_64
 	-machine q35
 	-cpu core2duo
+#	-cpu pentium      # Test CPU identification
 # Window title in graphics mode
 	-name "Simple OS"
 # Boot a multiboot kernel file

@@ -11,8 +11,9 @@
 ; is not sufficient. You must append your kernel or software to the end of
 ; the Pure64 binary. The maximum size of the kernel or software is 28KiB.
 ;
-; Windows - copy /b pure64.sys + kernel64.sys
-; Unix - cat pure64.sys kernel64.sys > pure64.sys
+; The binaries are put together like:
+;    cat mbr.sys second.sys img.sys padd.sys pure64.sys kernel64.sys > pure64.sys
+;
 ; Max size of the resulting pure64.sys is 32768 bytes (32KiB)
 ; =============================================================================
 
@@ -28,7 +29,8 @@ PURE64SIZE equ 4096    		     ; Pad Pure64 to this length
 start:
     jmp start32    		     ; This command will be overwritten with 'NOP's before the AP's are started
     nop
-    db 0x36, 0x34    		 ; '64' marker
+    ;db 'SimpOS'
+    db  0x36, 0x34    		 ; '64' marker
 
 ; =============================================================================
 ; Code for AP startup
@@ -682,8 +684,8 @@ times PURE64SIZE-($-$$) db 0x90
 
 endd:
 
-%assign num endd-padd
-%warning "padding available" num
+;%assign num endd-padd
+;%warning "padding available" num
 
 ; =============================================================================
 ; EOF
