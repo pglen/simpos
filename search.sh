@@ -3,4 +3,5 @@
 find . -name *.asm -exec grep -H "$1" {} \;
 find . -name *.inc -exec grep -H "$1" {} \;
 find . -name *.c   -exec grep -H "$1" {} \;
+find . -name "*.sh"   -exec grep -H "$1" {} \;
 

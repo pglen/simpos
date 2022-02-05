@@ -1,0 +1,39 @@
+Partition Table Fields
+
+Byte    Field
+Offset 	Length 	  Sample Value, 	Meaning
+
+00    | BYTE   |   0x80 Boot Indicator. Indicates whether the partition is the system
+      |        |   partition. Legal values are: 00 = Do not use for booting. 80 = System
+      |        |   partition.
+      |        |
+01    | BYTE   |   0x01 	Starting Head.
+      |        |
+02    | BYTE   |   0x01 Starting Sector. Only bits 0-5 are used. Bits 6-7 are the
+      |        |   upper two bits for the Starting Cylinder field.
+      |        |
+03    | BYTE   |   0x00 Starting Cylinder. This field contains the lower 8 bits of the
+      |        |   cylinder value. Starting cylinder is thus a 10-bit number, with a maximum
+      |        |   value of 1023.
+      |        |
+04    | BYTE   |   0x06 System ID. This byte defines the volume type. In Windows NT,
+      |        |   it also indicates that a partition is part of a volume that requires the
+      |        |   use of the HKEY_LOCAL_MACHINE\SYSTEM\DISK Registry subkey.
+      |        |
+05    | BYTE   |   0x0F 	Ending Head.
+      |        |
+06    | BYTE   |   0x3F Ending Sector. Only bits 0-5 are used. Bits 6-7 are the upper
+      |        |   two bits for the Ending Cylinder field.
+      |        |
+07    | BYTE   |   0x196 Ending Cylinder. This field contains the lower 8 bits of the
+      |        |   cylinder value. Ending cylinder is thus a 10-bit number, with a maximum
+      |        |   value of 1023.
+      |        |
+08    | DWORD  |   3F 00 00 00 	Relative Sector.
+      |        |
+12    | DWORD  |   51 42 06 00 	Total Sectors.
+
+Ours:
+
+    80 20 21 00 83 51 01 10 00 08 00 00 00 f8 03 00
+

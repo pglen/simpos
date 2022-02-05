@@ -13,19 +13,21 @@ EXEC_DIR="$PWD"
 OUTPUT_DIR="$EXEC_DIR/sys"
 
 function build_dir {
-	echo "Building $1 ..."
+	#echo "Building $1 ..."
 	cd "$1"
 	if [ -e "build.sh" ]; then
 		./build.sh
         RET=$?
-    fi
-	if [ -e "install.sh" ]; then
+    #fi
+	elif [ -e "install.sh" ]; then
 		./install.sh
         RET=$?
-	fi
-	if [ -e "Makefile" ]; then
+	#fi
+	elif [ -e "Makefile" ]; then
 		make --quiet
         RET=$?
+    else
+        echo "No build method"
 	fi
     #echo "ret" $RET
 	cd "$EXEC_DIR"
@@ -105,11 +107,11 @@ copy_file "src/mon-code/bin/monitor.bin" "${OUTPUT_DIR}/monitor.bin"
 #copy_file "src/BMFS/bin/bmfs" "${OUTPUT_DIR}/bmfs"
 
 cd sys
-../src/BMFS/bin/bmfs disk.img format
+../src/BMFS/bin/bmfs disk.img format  #|| echo ERROR; exit 1
 
 cd $EXEC_DIR
 
-./sh/install.sh monitor.bin
-./sh/install-demos.sh
+./sh/install.sh monitor.bin # || echo ERROR; exit 1
+./sh/install-demos.sh  #|| echo ERROR; exit 1
 
 # EOF

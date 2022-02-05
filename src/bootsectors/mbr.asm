@@ -1,4 +1,3 @@
-
 ; =============================================================================
 ; This Master Boot Record will load the secondary boot code.
 ; Some brain damaged engineer allocated 512 bytes for boot code .. useful for
@@ -36,8 +35,11 @@ start:
     mov ds, ax
     mov sp, 0x7C00
     sti                              ; Enable interrupts
-
     mov [DriveNumber], dl       ; BIOS passes drive number in DL
+
+    ;mov si, msg_Start
+    ;call print_string_16
+
     mov ah, 0
     mov al, 11100011b           ; 9600bps, no parity, 1 stop bit, 8 data bits
     mov dx, 0                   ; Serial port 0
@@ -48,12 +50,20 @@ start:
 
 read_disk:
 
+    ;mov     si, DAP
+    ;mov     cx, 16
+    ;call    dump_mem
+
+    ;mov     si, DriveNumber
+    ;mov     cx, 1
+    ;call    dump_mem
+
     mov si, msg_Read
     call print_string_16
 
     ; Read the 2nd stage boot loader into memory.
-    mov ah, 0x42                ; Extended Read
-    mov dl, [DriveNumber]        ; http://www.ctyme.com/intr/rb-0708.htm
+    mov ah, 0x42                    ; Extended Read
+    mov dl, [DriveNumber]           ; http://www.ctyme.com/intr/rb-0708.htm
     mov si, DAP
     int 0x13
     jc op_fail
@@ -61,7 +71,7 @@ read_disk:
     mov si, msg_OK
     call print_string_16
 
-    mov si, msg_Sig
+    mov si, msg_Sign
     call print_string_16
 
     ; Verify that the 2nd stage boot loader was read.
@@ -81,8 +91,8 @@ read_disk:
     call print_string_16
 
 success:
-    mov si, crlf
-    call print_string_16
+    ;mov si, crlf
+    ;call print_string_16
 
     mov dl, [DriveNumber]        ; http://www.ctyme.com/intr/rb-0708.htm
     ; jump to secodary boot sector
@@ -114,48 +124,88 @@ print_string_16:            ; Output string in SI to screen
     popa
     ret
 
+;; si to point to memory , cx number of bytes
+
+dump_mem:
+
+    ;mov      al, [si]
+    ;inc      si
+    lodsb
+    call     print_num_16
+    push     si
+    mov      si, space
+    call     print_string_16
+    pop si
+    loop     dump_mem
+    ret
+
 ;------------------------------------------------------------------------------
 ; 16 bit function to output the value of the al register
-
 
 print_char_16:                  ; Output char in al
     mov     ah,0xe
     int     0x10                ; Output the character
     ret
 
-msg_Init        db "Init ", 0
-msg_Read        db "Read ", 0
-msg_Sig         db "Signature ", 0
+;------------------------------------------------------------------------------
 
-msg_OK          db "OK ", 0
-msg_ERR         db "ERR ", 0
+print_num_16:               ; Output value in al
 
-crlf            db 10, 13, 0
+    push    ax
 
-padd:
-times 446-$+$$ db 0
-endd:
+    shr al, 4
+    and al, 0xf
 
-;%assign num endd-padd
-;%warning "padding available" num
+    cmp al, 9
+    jg  .hexx
+    add al, '0'
+    jmp .put
+  .hexx:
+    add al, 'A' - 10
+  .put:
+    mov ah,0xe
+    int 0x10                ; Output the character
+    pop ax
 
-; False partition table entry required by some BIOS vendors.
-db 0x80, 0x00, 0x01, 0x00, 0xEB, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF
-DriveNumber db 0x00
+    and al, 0xf
+    cmp al, 9
+    jg  .hexx2
+    add al, '0'
+    jmp .put2
+  .hexx2:
+    add al, 'A' - 10
+  .put2:
+    mov ah,0xe
+    int 0x10                ; Output the character
+    ret
 
 op_fail:
 
-    ;mov     al, ah
-    ;call    print_num_16
+    mov     al, ah
+    call    print_num_16
+
+    mov     si, space
+    call    print_string_16
 
     mov     si, msg_ERR
     call    print_string_16
 
     jmp     halt
 
-times 476-$+$$ db 0
+;; -----------------------------------------------------------
 
-align 4
+msg_Init        db "Init ", 0
+msg_Read        db "Read ", 0
+msg_Sign        db "Sign ", 0
+;msg_Start       db "Boot start ", 0
+
+msg_OK          db "OK ", 0
+msg_ERR         db "ERR ", 0
+
+crlf            db 10, 13, 0
+space           db ' ', 0
+
+DriveNumber db 0x00
 
 DAP:
     db 0x10
@@ -165,7 +215,23 @@ DAP:
     dw DAP_SEGMENT
     dq DAP_STARTSECTOR
 
+;padd:
+;times 446-$+$$ db 0
+;endd:
+;%assign num endd-padd
+;%warning "pre padding available" num
+; False partition table entry required by some BIOS vendors.
+;db 0x80, 0x00, 0x01, 0x00, 0xEB, 0xFF, 0xFF, 0xFF,
+;db 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF
+
+padd:
+
 times 510-$+$$ db 0
+
+endd:
+
+%assign num endd-padd
+%warning "padding available" num
 
 sign dw 0xAA55
 

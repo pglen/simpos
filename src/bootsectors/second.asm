@@ -1,13 +1,9 @@
 ; =============================================================================
-; Pure64 MBR -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
+; Second.asm -- a 64-bit OS/software loader written in Assembly for x86-64 systems
+; Copyright (C) 2020 Peter Glen; reproduction as open source permitted
 ;
-; This Master Boot Record will load Pure64 from a pre-defined location on the
-; hard drive without making use of the file system.
-;
-; In this code we are expecting a BMFS-formatted drive. With BMFS the Pure64
-; binary is required to start at sector 16 (8192 bytes from the start). A small
-; check is made to make sure Pure64 was loaded by comparing a signaiture.
+; This SECONDARY Master Boot Record will load Pure64. Heavily modified to
+; accommodate system parameter tweaking.
 ; =============================================================================
 
 ; Default location of the second stage boot loader. This loads
@@ -30,6 +26,7 @@ entry:
 
 align   4
 
+; ------------------------------------------------------------------------
 start:
 
     ; re-save drive number
@@ -49,16 +46,65 @@ start:
     call    read_disk
     call    check_sig
 
+    mov     ah, 02h
+    int     16h
+
+    call    print_num_16
+
+    mov     si, msg_Sel
+    call    print_string_16
+
+ .again_key:
+    mov     ah, 0
+    int     16h
+
+    cmp     al, 13
+    je      done_key
+
+    ; Ignore all other keys
+    cmp     al, '0'
+    jb      .again_key
+
+    cmp     al, '9'
+    ja      .again_key
+
+    ;push    ax
+    ;call    print_num_16
+    ;mov     si, space
+    ;call    print_string_16
+    ;pop     ax
+
+    push    ax
+    call    print_char_16
+    ;mov     si, space
+        ;call    print_string_16
+    pop     ax
+
+    jmp     .again_key
+
+; ------------------------------------------------------------------------
+done_key:
+
+    mov     si, space
+    call    print_string_16
+    mov     si, msg_OK
+    call    print_string_16
+
     mov     si, newline
     call    print_string_16
 
-    ;mov     ax, 0x200
-    ;call    wait_for_user
+    mov     ax, 0xa00
+    call    wait_for_user
 
+    ; Set mode here
+    mov     ax,0x118
     call    set_video
 
+; ------------------------------------------------------------------------
+; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
+
 jump_to_32:
-    ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
+
 
     cli                     ; No more interrupts
     lgdt [cs:GDTR32]        ; Load GDT register
@@ -78,7 +124,7 @@ halt:
     hlt
     jmp .halt2
 
-DAP:
+ DAP:
     db 0x10
     db 0x00
     dw DAP_SECTORS
@@ -87,15 +133,17 @@ DAP:
     dq DAP_STARTSECTOR
 
 msg_Init        db "In second stage ", 0
-msg_Read        db "Reading second stage ", 0
-msg_Sig         db "Signature check ", 0
+msg_Read        db "Reading ", 0
+msg_Sig         db "Sign check ", 0
 msg_Video       db "Set SVGA Mode ", 0
 msg_Halt        db "Sytem Halted ...", 0
-
 msg_Viderr      db "Error on setting video", 0
+msg_Sel         db 10, 13, 10, 13, "Select video mode: ", 0
+
 msg_OK          db "OK ", 0
+msg_ERR         db "ERR"            ; fall through to newline
 newline         db 10, 13, 0
-msg_ERR         db "ERR", 10, 13, 0
+space           db ' ', 0
 
 ;padd:
 ;times 446-$+$$ db 0
@@ -112,10 +160,12 @@ DriveNumber db 0x00
 
 align 4
 
+; ------------------------------------------------------------------------
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
 ; inputs: es:di -> destination buffer for 24 byte entries
 ; outputs: bp = entry count, trashes all registers except esi
+
 do_e820:
 
     mov edi, 0x00006000        ; location that memory map will be stored to
@@ -126,19 +176,19 @@ do_e820:
     mov [es:di + 20], dword 1    ; force a valid ACPI 3.X entry
     mov ecx, 24            ; ask for 24 bytes
     int 0x15
-    jc nomemmap            ; carry set on first call means "unsupported function"
+    jc .nomemmap            ; carry set on first call means "unsupported function"
     mov edx, 0x0534D4150        ; Some BIOSes apparently trash this register?
     cmp eax, edx            ; on success, eax must have been reset to "SMAP"
-    jne nomemmap
+    jne .nomemmap
     test ebx, ebx            ; ebx = 0 implies list is only 1 entry long (worthless)
-    je nomemmap
+    je .nomemmap
     jmp .jmpin
  .e820lp:
     mov eax, 0xe820            ; eax, ecx get trashed on every int 0x15 call
     mov [es:di + 20], dword 1    ; force a valid ACPI 3.X entry
     mov ecx, 24            ; ask for 24 bytes again
     int 0x15
-    jc memmapend            ; carry set means "end of list already reached"
+    jc .memmapend            ; carry set means "end of list already reached"
     mov edx, 0x0534D4150        ; repair potentially trashed register
  .jmpin:
     jcxz .skipent            ; skip any 0 length entries
@@ -158,13 +208,16 @@ do_e820:
  .skipent:
     test ebx, ebx            ; if ebx resets to 0, list is complete
     jne .e820lp
-nomemmap:
+ .nomemmap:
 ;    mov byte [cfg_e820], 0        ; No memory map function
-memmapend:
+ .memmapend:
     xor eax, eax            ; Create a blank record for termination (32 bytes)
     mov ecx, 8
     rep stosd
     ret
+
+; ------------------------------------------------------------------------
+; Check if we got the right processor
 
 check_64:
 
@@ -274,7 +327,13 @@ wait_for_user:
     pop     cx
     ret
 
+; ------------------------------------------------------------------------
+; Set video mode here ... may not be the wisest choice
+;
+
 set_video:
+
+    push    ax                  ; save video mode
 
     mov     si, msg_Video
     call    print_string_16
@@ -316,7 +375,9 @@ set_video:
     ;0x4115 is 800x600x24bit, 0x412E should be 32bit
     ; 0x4118 is 1024x768x24bit, 0x4138 should be 32bit
     ; 0x411B is 1280x1024x24bit, 0x413D should be 32bit
-    mov cx, 0x118            ; 1024x768x24
+
+    pop cx                    ; this was ax on entry
+    ;mov cx, 0x118            ; 1024x768x24
 
     ;mov cx, 0x318             ; Put your desired mode here
     ;mov cx, 0x4118            ; Put your desired mode here
@@ -343,6 +404,7 @@ set_video:
 
     ret
 
+; ------------------------------------------------------------------------
 ; Wait before setting video
 
 wait_some:
@@ -351,6 +413,9 @@ wait_some:
     dec ecx
     jnz .xxx2
   ret
+
+; ------------------------------------------------------------------------
+; Cannot set video
 
 vid_fail:
 
@@ -370,6 +435,9 @@ vid_fail:
 
     jmp     halt
 
+; ------------------------------------------------------------------------
+; Operation failed, print some error parameters
+
 op_fail:
 
     mov     al, ah
@@ -384,30 +452,49 @@ op_fail:
     jmp     halt
 
 
+; ------------------------------------------------------------------------
+
 print_char_16:              ; Output char in al
     mov ah,0xe
     int 0x10                ; Output the character
     ret
 
+; ------------------------------------------------------------------------
+
 print_num_16:               ; Output value in al
 
     push    ax
-    mov ah,0xe
+
     shr al, 4
-    add al, 0x30
+    and al, 0xf
+
+    cmp al, 9
+    jg  .hexx
+    add al, '0'
+    jmp .put
+  .hexx:
+    add al, 'A' - 10
+  .put:
     mov ah,0xe
     int 0x10                ; Output the character
     pop ax
 
+    and al, 0xf
+    cmp al, 9
+    jg  .hexx2
+    add al, '0'
+    jmp .put2
+  .hexx2:
+    add al, 'A' - 10
+  .put2:
     mov ah,0xe
-    and al,0xf
-    add al, 0x30
     int 0x10                ; Output the character
     ret
 
 ;------------------------------------------------------------------------------
-; 16-bit function to output a string to the serial port
+; 16-bit function to output a string to display and the serial port
 ; IN:    SI - Address of start of string
+
 print_string_16:            ; Output string in SI to screen
     pusha
     mov bx, 0
@@ -424,32 +511,34 @@ print_string_16:            ; Output string in SI to screen
  .done:
     popa
     ret
-;------------------------------------------------------------------------------
 
-hextable  		        db '0123456789ABCDEF'
+;------------------------------------------------------------------------------
+; Data here
+
+;hextable  		        db '0123456789ABCDEF'
 not_64                  db "This OS needs a 64 bit processor.", 10, 13, 0
 
 align 16
-GDTR32:                             ; Global Descriptors Table Register
+ GDTR32:                             ; Global Descriptors Table Register
     dw gdt32_end - gdt32 - 1        ; limit of GDT (size minus one)
     dq gdt32                        ; linear address of GDT
 
 align 16
-gdt32:
+ gdt32:
     dw 0x0000, 0x0000, 0x0000, 0x0000    ; Null desciptor
     dw 0xFFFF, 0x0000, 0x9A00, 0x00CF    ; 32-bit code descriptor
     dw 0xFFFF, 0x0000, 0x9200, 0x00CF    ; 32-bit data descriptor
-gdt32_end:
+ gdt32_end:
 
 ;------------------------------------------------------------------------------
 
-padd:
+ padd:
 
 times 1534-$+$$ db 0
 sign dw 0xAA55
-endd:
+ endd:
 
-;%assign num endd-padd
-;%warning "padding available" num
+%assign num endd-padd
+%warning "padding available" num
 
 ; EOF

@@ -1,0 +1,583 @@
+     1                                  
+     2                                  ;********************************************************************;
+     3                                  ;*                      x86 Master partition Record                 *;
+     4                                  ;*                   github.com/egormkn/bootloader                  *;
+     5                                  ;*                       edited by peter glen                       *;
+     6                                  ;********************************************************************;
+     7                                  
+     8                                  ; Sat 29.Jan.2022 adapted from original
+     9                                  ; Sun 30.Jan.2022 cleared [bypassed] 0x42 check
+    10                                  ; Sun 30.Jan.2022 filled DAP
+    11                                  
+    12                                  ; This is re-written to have more verbose error reporting; and yeah
+    13                                  ; the ugly delay to read the screen was in the way of instant boot;
+    14                                  ; Also, the extended bios int 13h test does not work on virtual
+    15                                  ; platforms - all good
+    16                                  
+    17                                  %define BASE 0x7C00             ; Address at which BIOS will load MBR
+    18                                  %define DEST 0x0600             ; Address at which MBR should be copied
+    19                                  %define SIZE 512                ; MBR sector size (default: 512 bytes)
+    20                                  %define ENTRY_SIZE 16           ; Partition table entry size
+    21                                  %define ENTRY_NUM 4             ; Number of partition entries
+    22                                  %define DISK_ID 0x00000000      ; NT Drive Serial Number (4 bytes)
+    23                                  %define SHIFT_MEM (BASE-DEST)   ; This many bytes for memory shift to target
+    24                                  
+    25                                  %define  DAP_SECTORS        1
+    26                                  %define  DAP_ADDRESS        0x7c00
+    27                                  %define  DAP_SEGMENT        0
+    28                                  %define  DAP_STARTSECTOR    1
+    29                                  
+    30                                  ;********************************************************************;
+    31                                  ;*                           NASM settings                          *;
+    32                                  ;********************************************************************;
+    33                                  
+    34                                  [BITS 16]                   ; Enable 16-bit real mode
+    35                                  [ORG BASE]                  ; Set the base address for MBR
+    36                                  
+    37                                  ;********************************************************************;
+    38                                  ;*                         Prepare registers                        *;
+    39                                  ;********************************************************************;
+    40                                  
+    41                                  begin:
+    42                                  
+    43 00000000 31C0                        xor ax, ax                  ; Zero out the Accumulator register
+    44 00000002 8ED0                        mov ss, ax                  ; Zero out Stack Segment register
+    45 00000004 BC007C                      mov sp, BASE                ; Set Stack Pointer to BASE
+    46 00000007 8EC0                        mov es, ax                  ; Zero out Extra Segment register
+    47 00000009 8ED8                        mov ds, ax                  ; Zero out Data Segment register
+    48                                  
+    49 0000000B 8816[3B01]                  mov [drive_number], dl
+    50                                  
+    51                                  ;********************************************************************;
+    52                                  ;*                  Copy MBR to DEST and jump there                 *;
+    53                                  ;********************************************************************;
+    54                                  
+    55 0000000F BE007C                      mov si, BASE                ; Source Index to copy code from
+    56 00000012 BF0006                      mov di, DEST                ; Destination Index to copy code to
+    57 00000015 B90002                      mov cx, SIZE                ; Number of bytes to be copied
+    58                                  
+    59 00000018 FC                          cld                         ; clear Direction Flag (move forward)
+    60 00000019 F3A4                        rep movsb                   ; Repeat MOVSB instruction for CX times
+    61                                  
+    62                                      ; Invalidate the buffer by putting bad opcode in it
+    63                                      ;mov  word [BASE], 0x0B0F
+    64                                  
+    65 0000001B 50                          push ax                     ; Push continuation address to stack
+    66 0000001C 682006                      push SKIP + DEST            ;  to jump to SKIP in the copied code
+    67 0000001F CB                          retf                        ; jump to copied code skipping part above
+    68                                  
+    69                                  align 4
+    70                                  
+    71                                  SKIP: EQU ($ - $$)              ; Go here in copied code
+    72                                  
+    73                                  ;********************************************************************;
+    74                                  ;*                   Check for an Active partition                  *;
+    75                                  ;********************************************************************;
+    76                                  
+    77 00000020 FB                          sti                         ; enable interrupts
+    78                                  
+    79                                      ;mov     si, sign_on
+    80                                      ;call    print_string_16
+    81                                  
+    82                                      ;mov     al, [drive_number]
+    83                                      ;call    print_num_16
+    84                                  
+    85 00000021 B90400                      mov cx, ENTRY_NUM           ; Maximum of four entries as loop counter
+    86 00000024 BDBE07                      mov bp, TABLE_OFFSET + DEST ; Location of first entry in the table
+    87                                  
+    88                                  find_active:
+    89                                  
+    90 00000027 807E0000                    cmp byte [bp], 0            ; Subtract 0 from first byte of entry at
+    91                                                                  ; SS:[BP]. Anything from 80h to FFh has 1
+    92                                                                  ; in highest bit (Sign Flag will be set)
+    93                                  
+    94 0000002B 7C12                        jl boot_partition           ; Active partition found (SF set), boot
+    95 0000002D 0F858200                    jnz print_partition         ; Active flag is not zero, show an error
+    96                                                                  ; Otherwise, we found a zero, check other
+    97                                  
+    98 00000031 83C510                      add bp, ENTRY_SIZE          ; Switch to the next partition entry
+    99 00000034 E2F1                        loop find_active            ; Check next entry unless CL = 0
+   100                                  
+   101 00000036 BE[3C01]                    mov     si, invalid_error
+   102 00000039 E8BA00                      call    print_string_16
+   103                                  
+   104                                      ;int 0x18                    ; Start ROM-BASIC or display an error
+   105 0000003C E98900                      jmp halt
+   106                                  
+   107                                  boot_partition:                 ; Boot from selected partition
+   108                                                                  ; bp holds the entry pointer
+   109                                  
+   110                                  ;********************************************************************;
+   111                                  ;*              Select the way of working with the disk             *;
+   112                                  ;********************************************************************;
+   113                                  
+   114                                  ; This needed to updated, as the virtual systems do not implement
+   115                                  ; this check, as it is assumed the the ah=0x42 is present.
+   116                                  ; In 2020 this is a reasonable assumption
+   117                                  
+   118 0000003F EB00                        jmp int13_extended           ; all the hard work ... going around
+   119                                  
+   120                                                                   ; used as disk number (first HDD = 80h)
+   121                                      ;push bp                     ; save Base Pointer on Stack
+   122                                      ;mov byte [bp+0x11], 5       ; Number of attempts of reading the disk
+   123                                      ;mov byte [bp+0x10], 0       ; Used as a flag for the INT13 Extensions
+   124                                      ;
+   125                                      ;mov ah, 0x41                ;/ INT13h BIOS Extensions check
+   126                                      ;mov bx, 0x55aa              ;| AH = 41h, BX = 55AAh, DL = 80h
+   127                                      ;int 0x13                    ;| if CF flag cleared and [BX] changes to
+   128                                      ;                            ;| aa55h, they are installed
+   129                                      ;                            ;| major version is in AH: 01h=1.x;
+   130                                      ;                            ;| 20h=2.0/edd-1.0; 21h=2.1/edd-1.1;
+   131                                      ;                            ;| 30h=EDD-3.0.
+   132                                      ;                            ;| CX = API subset support bitmap.
+   133                                      ;                            ;| If bit 0 is set, extended disk access
+   134                                      ;                            ;| functions (AH=42h-44h,47h,48h) are
+   135                                      ;                            ;| supported. Only if no extended support
+   136                                      ;                            ;\ is available, will it fail TEST
+   137                                      ;
+   138                                      ;pop bp                      ; Get back original Base Pointer.
+   139                                      ;jb no_int13                 ; Below? If so, CF=1 (not cleared)
+   140                                      ;                            ;   so no INT 13 Ext. & do jump!
+   141                                      ;cmp bx, 0xaa55              ; Did contents of BX change?  If
+   142                                      ;jnz no_int13                ;   not, jump to offset 0659.
+   143                                      ;test cx, 0001               ; Final test for INT 13 Extensions!
+   144                                      ;                            ; if bit 0 not set, this will fail,
+   145                                      ;jz no_int13                 ;   then we jump over next line...
+   146                                      ;inc byte [bp+0x10]          ; or increase [BP+10h] by one.
+   147                                      ;
+   148                                      ;no_int13:
+   149                                      ;pushad                      ; Save all 32-bit Registers on the stack
+   150                                      ;                            ; (EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI)
+   151                                      ;
+   152                                      ;cmp byte [bp+0x10], 00      ; Compare [BP+0x10] to zero;
+   153                                      ;jz int13_basic              ; If 0, can't use Extensions
+   154                                  
+   155                                  ;********************************************************************;
+   156                                  ;*                 Read VBR with INT13 Extended Read                *;
+   157                                  ;********************************************************************;
+   158                                  
+   159                                  ; The following code uses INT 13, Function 42h ("Extended Read")
+   160                                  ; by first pushing the "Disk Address Packet" onto the Stack in
+   161                                  ; reverse order of how it will read the data
+   162                                  ;
+   163                                  ; Offset Size	       Description of DISK ADDRESS PACKET's Contents
+   164                                  ; ------ -----  ------------------------------------------------------
+   165                                  ;   00h  BYTE	Size of packet (10h or 18h; 16 or 24 bytes).
+   166                                  ;   01h  BYTE	Reserved (00).
+   167                                  ;   02h  WORD	Number of blocks to transfer (Only 1 sector for us)
+   168                                  ;   04h  DWORD	Points to -> Transfer Buffer (00007C00 for us).
+   169                                  ;   08h  QWORD	Starting Absolute Sector (get from Partition Table:
+   170                                  ;                (00000000 + DWORD PTR [BP+08]). Remember, the
+   171                                  ;                Partition Table Preceding Sectors entry can only be
+   172                                  ;                a max. of 32 bits!
+   173                                  ;   10h  QWORD   (EDD-3.0, optional) 64-bit flat address of transfer
+   174                                  ;                buffer; only used if DWORD at 04h is FFFF:FFFF
+   175                                  
+   176                                  int13_extended:
+   177                                  
+   178 00000041 BE[2C8B]                    mov     si, booting - SHIFT_MEM
+   179 00000044 E8AF00                      call    print_string_16
+   180                                  
+   181                                      ;push strict dword 0x0       ; Push 4 zero-bytes (32-bits) onto
+   182                                                                   ; stack to pad VBR's Starting Sector
+   183 00000047 668B4608                    mov     eax,  [BP+0x08]
+   184 0000004B 66A3[A401]                  mov     [DAP + 0x08], eax
+   185                                  
+   186                                      ; Dump DAP
+   187                                      ;mov     si, DAP
+   188                                      ;add     si, 8
+   189                                      ;mov     cx, 16
+   190                                      ;call    dump_mem
+   191                                  
+   192                                      ; Copy it over
+   193 0000004F 8A16[3B01]                  mov     dl, [drive_number]
+   194 00000053 8816[3B8B]                  mov     [drive_number - SHIFT_MEM], dl
+   195                                  
+   196                                      ; Show drive number
+   197                                      ;mov     si, drive_number - SHIFT_MEM
+   198                                      ;mov     cx, 1
+   199                                      ;call    dump_mem
+   200                                  
+   201 00000057 B442                        mov     ah, 0x42                ; Function 42h
+   202 00000059 8A16[3B01]                  mov     dl, [drive_number]
+   203 0000005D BE[9C01]                    mov     si, DAP
+   204 00000060 CD13                        int     0x13                    ; Try to get VBR Sector from disk
+   205                                  
+   206                                      ; If successful, CF is cleared (0) and AH set to 00h.
+   207 00000062 7321                        jnc     jump_final
+   208                                  
+   209                                      ; If any errors, CF is set to 1    and AH = error code. In either case,
+   210                                      ; DAP's block count field is set to number of blocks actually transferred
+   211                                  
+   212 00000064 50                          push    ax
+   213 00000065 BE[298B]                    mov     si, newline - SHIFT_MEM
+   214 00000068 E88B00                      call    print_string_16
+   215                                  
+   216 0000006B BE[5F8B]                    mov     si, loading_error - SHIFT_MEM
+   217 0000006E E88500                      call    print_string_16
+   218 00000071 58                          pop     ax
+   219                                  
+   220 00000072 88E0                        mov     al, ah
+   221 00000074 E85900                      call    print_num_16
+   222                                  
+   223 00000077 BE[398B]                    mov     si, space  - SHIFT_MEM
+   224 0000007A E87900                      call    print_string_16
+   225                                  
+   226 0000007D A0[3B01]                    mov     al, [drive_number]
+   227 00000080 E84D00                      call    print_num_16
+   228                                  
+   229 00000083 EB43                        jmp     halt
+   230                                  
+   231                                  jump_final:
+   232                                  
+   233 00000085 813EFE7D55AA                cmp     word [BASE + SIZE -2], 0xaa55
+   234 0000008B 7408                        je      final_go
+   235                                  
+   236 0000008D BE[0E8B]                    mov     si, nosig - SHIFT_MEM
+   237 00000090 E86300                      call    print_string_16
+   238                                  
+   239 00000093 EB33                        jmp     halt
+   240                                  
+   241                                  final_go:
+   242                                  
+   243 00000095 BE[1C8B]                    mov     si, final - SHIFT_MEM
+   244 00000098 E85B00                      call    print_string_16
+   245                                  
+   246 0000009B 8A16[3B8B]                  mov     dl, [drive_number - SHIFT_MEM]
+   247                                  
+   248                                      ;mov     dl, 0x80
+   249                                      ;mov     al,dl
+   250                                      ;call    print_num_16 - SHIFT_MEM
+   251                                  
+   252                                      ;xor     ax,ax
+   253                                      ;push    ax                 ; Push continuation address to stack
+   254                                      ;push    BASE               ;  to jump to the loaded code
+   255                                      ;retf                       ; jump to copied code skipping part above
+   256                                  
+   257 0000009F EA007C0000                  jmp 0x0000:0x7c00           ; Jump to Volume Boot Record code
+   258                                                                  ; loaded into Memory by this MBR.
+   259                                  
+   260                                  
+   261                                      ;int 0x18              ; Is this instruction here to meet some specification of TPM v 1.2 ?
+   262                                      ;                      ; The usual 'INT18 if no disk found' is in the code above at 0632.
+   263                                  
+   264                                  
+   265                                  
+   266                                  ; ------------------------------------------------------------------------
+   267                                  ; si to point to memory, cx number of bytes to dump
+   268                                  
+   269                                  dump_mem:
+   270                                  
+   271                                      ;mov      al, [si]
+   272                                      ;inc      si
+   273 000000A4 AC                          lodsb
+   274 000000A5 E82800                      call     print_num_16
+   275 000000A8 56                          push     si
+   276 000000A9 BE[3901]                    mov      si, space
+   277 000000AC E84700                      call     print_string_16
+   278 000000AF 5E                          pop si
+   279 000000B0 E2F2                        loop     dump_mem
+   280 000000B2 C3                          ret
+   281                                  
+   282                                  ;********************************************************************;
+   283                                  ;*          Trusted Platform Module support (hardcoded here)        *;
+   284                                  ;********************************************************************;
+   285                                  
+   286                                  ; deleted Sun 30.Jan.2022
+   287                                  
+   288                                  ;; =====================================================================
+   289                                  ;;   All of the code from 06C6 through 0726 is related to discovering if
+   290                                  ;; TPM version 1.2 interface support is operational on the system, since
+   291                                  ;; it could be used by  BitLocker for validating the integrity of a PC's
+   292                                  ;; early startup components before allowing the OS to boot. The spec for
+   293                                  ;; the TPM code below states "There MUST be no requirement placed on the
+   294                                  ;; A20 state on entry to these INT 1Ah functions." (p.83) We assume here
+   295                                  ;; Microsoft understood this to mean access to memory over 1 MiB must be
+   296                                  ;; made available before entering any of the TPM's INT 1Ah functions.
+   297                                  ;
+   298                                  ;; The following code is actually a method for gaining access to Memory
+   299                                  ;; locations above 1 MiB (also known as enabling the A20 address line).
+   300                                  ;;
+   301                                  ;; Each address line allows the CPU to access ( 2 ^ n ) bytes of memory:
+   302                                  ;; A0 through A15 can give access to 2^16 = 64 KiB. The A20 line allows
+   303                                  ;; a jump from 2^20 (1 MiB) to 2^21 = 2 MiB in accessible memory.  But
+   304                                  ;; our computers are constructed such that simply enabling the A20 line
+   305                                  ;; also allows access to any available memory over 1 MiB if both the CPU
+   306                                  ;; and code can handle it (once outside of "Real Mode"). Note: With only
+   307                                  ;; a few minor differences, this code at 06C6-06E1 and the Subroutine at
+   308                                  ;; A20_CHECK_WAIT ff. are the same as rather old sources we found on the Net.
+   309                                  ;
+   310                                  ;06C6 e88d00        CALL   0756
+   311                                  ;06C9 7517          JNZ    A20_CHECK_WAIT
+   312                                  ;
+   313                                  ;06CB FA            CLI           ; Clear IF, so CPU ignores maskable interrupts.
+   314                                  ;06CC B0D1          MOV    AL,D1
+   315                                  ;06CE E664          OUT    64,AL
+   316                                  ;06D0 E88300        CALL   A20_CHECK_WAIT
+   317                                  ;
+   318                                  ;06D3 B0DF          MOV    AL,DF
+   319                                  ;06D5 E660          OUT    60,AL
+   320                                  ;06D7 E87C00        CALL   A20_CHECK_WAIT
+   321                                  ;
+   322                                  ;06DA B0FF          MOV    AL,FF
+   323                                  ;06DC E664          OUT    64,AL
+   324                                  ;06DE E87500        CALL   A20_CHECK_WAIT
+   325                                  ;06E1 FB            STI           ; Set IF, so CPU can respond to maskable interrupts
+   326                                  ;                                 ; again, after the next instruction is executed.
+   327                                  ;
+   328                                  ;; Comments below checked with the document, "TCG PC Client Specific
+   329                                  ;; Implementation Specification For Conventional BIOS" (Version 1.20
+   330                                  ;; FINAL/Revision 1.00/July 13, 2005/For TPM Family 1.2; Level 2), �
+   331                                  ;; 12.5, pages 85 ff.  TCG and "TCG BIOS DOS Test Tool" (MSDN).
+   332                                  ;
+   333                                  ;06E2 B800BB        MOV    AX,BB00   ; With AH = BBh and AL = 00h
+   334                                  ;06E5 CD1A          INT    1A        ; Int 1A ->  TCG_StatusCheck
+   335                                  ;
+   336                                  ;06E7 6623C0      * AND    EAX,EAX  ;/   If EAX does not equal zero,
+   337                                  ;06EA 753B          JNZ    0727     ;\ then no BIOS support for TCG.
+   338                                  ;
+   339                                  ;06EC 6681FB544350+  * CMP  EBX,41504354   ; EBX must also return ..
+   340                                  ;                                         ; the numerical equivalent
+   341                                  ;; of the ASCII character string "TCPA" ("54 43 50 41") as a further
+   342                                  ;; check. (Note: Since hex numbers are stored in reverse order on PC
+   343                                  ;; media or in Memory, a TPM BIOS would put 41504354h in EBX.)
+   344                                  ;
+   345                                  ;06F3 7532             JNZ    0727       ;  If not, exit TCG code.
+   346                                  ;06F5 81F90201         CMP    CX,0102    ; Version 1.2 or higher ?
+   347                                  ;06F9 722C             JB     0727       ;  If not, exit TCG code.
+   348                                  ;
+   349                                  ;; If TPM 1.2 found, perform a: "TCG_CompactHashLogExtendEvent".
+   350                                  ;
+   351                                  ;06FB 666807BB0000   * PUSH   0000BB07   ; Setup for INT 1Ah AH = BB,
+   352                                  ;                                        ; AL = 07h command (p.94 f).
+   353                                  ;0701 666800020000   * PUSH   00000200   ;
+   354                                  ;0707 666808000000   * PUSH   00000008   ;
+   355                                  ;070D 6653           * PUSH   EBX        ;
+   356                                  ;070F 6653           * PUSH   EBX        ;
+   357                                  ;0711 6655           * PUSH   EBP        ;
+   358                                  ;0713 666800000000   * PUSH   00000000   ;
+   359                                  ;0719 6668007C0000   * PUSH   00007C00   ;
+   360                                  ;071F 6661           * POPAD             ;
+   361                                  ;0721 680000         * PUSH   0000       ;
+   362                                  ;0724 07               POP    ES         ;
+   363                                  ;0725 CD1A             INT    1A
+   364                                  ;
+   365                                  ;; On return, "(EAX) = Return Code as defined in Section 12.3" and
+   366                                  ;;            "(EDX) = Event number of the event that was logged".
+   367                                  ;; =====================================================================
+   368                                  
+   369                                  ;DB 0xE8, 0x8D, 0x00, 0x75, 0x17, 0xFA, 0xB0, 0xD1, 0xE6, 0x64, 0xE8, 0x83
+   370                                  ;DB 0x00, 0xB0, 0xDF, 0xE6, 0x60, 0xE8, 0x7C, 0x00, 0xB0, 0xFF, 0xE6, 0x64
+   371                                  ;DB 0xE8, 0x75, 0x00, 0xFB, 0xB8, 0x00, 0xBB, 0xCD, 0x1A, 0x66, 0x23, 0xC0
+   372                                  ;DB 0x75, 0x3B, 0x66, 0x81, 0xFB, 0x54, 0x43, 0x50, 0x41, 0x75, 0x32, 0x81, 0xF9
+   373                                  ;DB 0x02, 0x01, 0x72, 0x2C, 0x66, 0x68, 0x07, 0xBB, 0x00, 0x00, 0x66, 0x68
+   374                                  ;DB 0x00, 0x02, 0x00, 0x00, 0x66, 0x68, 0x08, 0x00, 0x00, 0x00, 0x66, 0x53
+   375                                  ;DB 0x66, 0x53, 0x66, 0x55, 0x66, 0x68, 0x00, 0x00, 0x00, 0x00, 0x66, 0x68
+   376                                  ;DB 0x00, 0x7C, 0x00, 0x00, 0x66, 0x61, 0x68, 0x00, 0x00, 0x07, 0xCD, 0x1A
+   377                                  
+   378                                  
+   379                                  ;********************************************************************;
+   380                                  ;*                        Jump to loaded VBR                        *;
+   381                                  ;********************************************************************;
+   382                                  
+   383                                  ;********************************************************************;
+   384                                  ;*                   Print errors by jumping here                   *;
+   385                                  ;********************************************************************;
+   386                                  
+   387                                  ; Note: When the last character of any Error Message has been displayed, the
+   388                                  ; instructions at offsets 0748, 0753 and 0754 lock computer's execution into
+   389                                  ; a never ending loop! You must reboot the machine.  INT 10, Function 0Eh
+   390                                  ; (Teletype Output) is used to display each character of these error messages.
+   391                                  
+   392                                  ;print_missing:
+   393                                  ;    mov si, missing_error
+   394                                  ;    jmp print_error
+   395                                  ;
+   396                                  ;print_loading:
+   397                                  ;    mov si,  loading_error
+   398                                  ;    jmp print_error
+   399                                  ;
+   400                                  print_partition:
+   401 000000B3 BE[3C01]                    mov si,  invalid_error
+   402 000000B6 EB00                        jmp print_error
+   403                                  
+   404                                  ;********************************************************************;
+   405                                  ;*                  Subroutine that prints text                     *;
+   406                                  ;********************************************************************;
+   407                                  
+   408                                  ;print_str:
+   409                                  ;    lodsb                   ; Load character into AL from [SI]
+   410                                  ;    cmp al, 0               ; Check for end of string
+   411                                  ;    je  .end_print
+   412                                  ;    mov ah, 0x0e            ; Character print function
+   413                                  ;    int 0x10                ;
+   414                                  ;    jmp print_str
+   415                                  ;  .end_print:
+   416                                  ;    ret
+   417                                  
+   418                                  ;********************************************************************;
+   419                                  ;*               Subroutine that prints an error text               *;
+   420                                  ;********************************************************************;
+   421                                  
+   422                                  print_error:
+   423                                      ;xor ah, ah              ; Zero-out AH
+   424                                      ;add ax, DEST + 0x100    ; Add 0x700 to offset passed in AL
+   425 000000B8 89C6                        mov si, ax              ; Put string offset to SI register
+   426                                  
+   427                                      print_character:
+   428 000000BA AC                          lodsb                   ; Load character into AL from [SI]
+   429 000000BB 3C00                        cmp al, 0               ; Check for end of string
+   430 000000BD 7409                        jz halt                 ; Halt if string is printed
+   431 000000BF BB0700                      mov bx, 0x7             ; Display page 0, white on black
+   432 000000C2 B40E                        mov ah, 0x0e            ; Character print function
+   433 000000C4 CD10                        int 0x10                ;
+   434 000000C6 EBF2                        jmp print_character     ; Go back for another character...
+   435                                  
+   436                                  halt:
+   437 000000C8 F4                          hlt
+   438 000000C9 EBFD                        jmp halt
+   439                                  
+   440                                  ; ------------------------------------------------------------------------
+   441                                  
+   442                                  print_char_16:              ; Output char in al
+   443 000000CB B40E                        mov ah,0xe
+   444 000000CD CD10                        int 0x10                ; Output the character
+   445 000000CF C3                          ret
+   446                                  
+   447                                  ;------------------------------------------------------------------------------
+   448                                  
+   449                                  print_num_16:               ; Output value in al
+   450                                  
+   451 000000D0 50                          push    ax
+   452                                  
+   453 000000D1 C0E804                      shr al, 4
+   454 000000D4 240F                        and al, 0xf
+   455                                  
+   456 000000D6 3C09                        cmp al, 9
+   457 000000D8 7F04                        jg  .hexx
+   458 000000DA 0430                        add al, '0'
+   459 000000DC EB02                        jmp .put
+   460                                    .hexx:
+   461 000000DE 0437                        add al, 'A' - 10
+   462                                    .put:
+   463 000000E0 B40E                        mov ah,0xe
+   464 000000E2 CD10                        int 0x10                ; Output the character
+   465 000000E4 58                          pop ax
+   466                                  
+   467 000000E5 240F                        and al, 0xf
+   468 000000E7 3C09                        cmp al, 9
+   469 000000E9 7F04                        jg  .hexx2
+   470 000000EB 0430                        add al, '0'
+   471 000000ED EB02                        jmp .put2
+   472                                    .hexx2:
+   473 000000EF 0437                        add al, 'A' - 10
+   474                                    .put2:
+   475 000000F1 B40E                        mov ah,0xe
+   476 000000F3 CD10                        int 0x10                ; Output the character
+   477 000000F5 C3                          ret
+   478                                  
+   479                                  ;------------------------------------------------------------------------------
+   480                                  ; 16-bit function to output a string to the serial port
+   481                                  ; IN:    SI - Address of start of string
+   482                                  print_string_16:            ; Output string in SI to screen
+   483 000000F6 60                          pusha
+   484 000000F7 BB0000                      mov bx, 0
+   485 000000FA BA0000                      mov dx, 0                ; Port 0
+   486                                   .repeat:
+   487 000000FD B401                        mov ah, 0x01            ; Serial - Write character to port
+   488 000000FF AC                          lodsb                    ; Get char from string
+   489 00000100 3C00                        cmp al, 0
+   490 00000102 7408                        je .done                ; If char is zero, end of string
+   491 00000104 CD14                        int 0x14                ; Output the character
+   492 00000106 B40E                        mov ah,0xe
+   493 00000108 CD10                        int 0x10                ; Output the character
+   494 0000010A EBF1                        jmp short .repeat
+   495                                   .done:
+   496 0000010C 61                          popa
+   497 0000010D C3                          ret
+   498                                  
+   499                                  ;------------------------------------------------------------------------------
+   500                                  
+   501                                  ;********************************************************************;
+   502                                  ;*              Subroutine of A20 line enablement code              *;
+   503                                  ;********************************************************************;
+   504                                  
+   505                                  ; This routine checks/waits for access to KB controller
+   506                                  ;
+   507                                  ;a20_check_wait:
+   508                                  ;    sub cx, cx                  ; Sets CX = 0  NASM USES ANOTHER INSTRUCTION
+   509                                  ;    check_something:
+   510                                  ;        in al, 0x64             ; Check port 64h
+   511                                  ;        jmp unused_jump         ; Seems odd, but this is how it's done
+   512                                  ;        unused_jump:
+   513                                  ;        and al, 2                    ; Test for only 'Bit 1' *not* set
+   514                                  ;        loopne check_something       ; Continue to check (loop) until
+   515                                  ;                                     ; cx = 0 (and ZF=1); it's ready
+   516                                  ;    and al, 2
+   517                                  ;    ret
+   518                                  
+   519 0000010E 4E6F20414135352073-     nosig           db  'No AA55 sig', 10, 13, 0
+   519 00000117 69670A0D00         
+   520 0000011C 4A4D5020746F204F53-     final           db  'JMP to OS ', 10, 13, 0
+   520 00000125 200A0D00           
+   521                                  ;sign_on        db  'Starting boot sector'
+   522 00000129 0A0D00                  newline         db  10, 13, 0
+   523 0000012C 426F6F74696E67202E-     booting         db  'Booting ... ', 0
+   523 00000135 2E2E2000           
+   524 00000139 2000                    space           db  ' ', 0
+   525 0000013B 00                      drive_number:   db  0
+   526                                  
+   527                                  ;********************************************************************;
+   528                                  ;*                          Error messages                          *;
+   529                                  ;********************************************************************;
+   530                                  
+   531                                  ;invalid_error: DB "No patitions.", 10, 13,  0
+   532 0000013C 4D4252204E6F20626F-     invalid_error: DB "MBR No bootable patitions found.", 10, 13,  0
+   532 00000145 6F7461626C65207061-
+   532 0000014E 746974696F6E732066-
+   532 00000157 6F756E642E0A0D00   
+   533 0000015F 4D4252204572726F72-     loading_error: DB "MBR Error on disk read. ", 10, 13, 0
+   533 00000168 206F6E206469736B20-
+   533 00000171 726561642E200A0D00 
+   534 0000017A 4D4252204E6F206F70-     missing_error: DB "MBR No operating system found. ", 10, 13, 0
+   534 00000183 65726174696E672073-
+   534 0000018C 797374656D20666F75-
+   534 00000195 6E642E200A0D00     
+   535                                  
+   536                                  DAP:
+   537 0000019C 10                          db 0x10             ; 0
+   538 0000019D 00                          db 0x00             ; 1
+   539 0000019E 0100                        dw DAP_SECTORS      ; 2
+   540 000001A0 007C                        dw DAP_ADDRESS      ; 4
+   541 000001A2 0000                        dw DAP_SEGMENT      ; 6
+   542 000001A4 0100000000000000            dq DAP_STARTSECTOR  ; 8
+   543                                  
+   544 000001AC 0000                    DW 0x0000
+   545 000001AE 00000000                DD DISK_ID
+   546 000001B2 0000                    DW 0x0000
+   547                                  
+   548                                  ;********************************************************************;
+   549                                  ;*                    Partition Table + Alignment                   *;
+   550                                  ;********************************************************************;
+   551                                  
+   552                                  TABLE_SIZE: EQU (ENTRY_NUM * ENTRY_SIZE)    ; Should be 4*16 = 64
+   553                                  TABLE_OFFSET: EQU (SIZE - TABLE_SIZE - 2)   ; Should be 512-64-2 = 446
+   554                                  
+   555                                  padd:
+   556                                  
+   557 000001B4 90<rep Ah>              TIMES TABLE_OFFSET - ($ - $$) DB 0x90       ; Fill up to 446 bytes with 'nop'
+   558                                  
+   559                                  endd:
+   560                                  
+   561                                  %assign num endd-padd
+   562                                  %warning "padding available" num
+   562          ******************       warning: "padding available" 10 [-w+user]
+   563                                  
+   564 000001BE 00<rep 40h>             TIMES TABLE_SIZE DB 0x00    ; Fill partition table with 0x00
+   565                                  
+   566                                  ; End of file
+   567                                  
+   568 000001FE 55AA                    DB  0x55, 0xAA               ; Mark sector as bootable
+   569                                  
+   570                                  ; EOF
+   571                                  

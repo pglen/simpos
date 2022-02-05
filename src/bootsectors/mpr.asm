@@ -6,13 +6,26 @@
 ;********************************************************************;
 
 ; Sat 29.Jan.2022 adapted from original
+; Sun 30.Jan.2022 cleared [bypassed] 0x42 check
+; Sun 30.Jan.2022 filled DAP
 
-%define BASE 0x7C00         ; Address at which BIOS will load MBR
-%define DEST 0x0600         ; Address at which MBR should be copied
-%define SIZE 512            ; MBR sector size (default: 512 bytes)
-%define ENTRY_SIZE 16       ; Partition table entry size
-%define ENTRY_NUM 4         ; Number of partition entries
-%define DISK_ID 0x00000000  ; NT Drive Serial Number (4 bytes)
+; This is re-written to have more verbose error reporting; and yeah
+; the ugly delay to read the screen was in the way of instant boot;
+; Also, the extended bios int 13h test does not work on virtual
+; platforms - all good
+
+%define BASE 0x7C00             ; Address at which BIOS will load MBR
+%define DEST 0x0600             ; Address at which MBR should be copied
+%define SIZE 512                ; MBR sector size (default: 512 bytes)
+%define ENTRY_SIZE 16           ; Partition table entry size
+%define ENTRY_NUM 4             ; Number of partition entries
+%define DISK_ID 0x00000000      ; NT Drive Serial Number (4 bytes)
+%define SHIFT_MEM (BASE-DEST)   ; This many bytes for memory shift to target
+
+%define  DAP_SECTORS        1
+%define  DAP_ADDRESS        0x7c00
+%define  DAP_SEGMENT        0
+%define  DAP_STARTSECTOR    1
 
 ;********************************************************************;
 ;*                           NASM settings                          *;
@@ -25,11 +38,15 @@
 ;*                         Prepare registers                        *;
 ;********************************************************************;
 
+begin:
+
     xor ax, ax                  ; Zero out the Accumulator register
     mov ss, ax                  ; Zero out Stack Segment register
     mov sp, BASE                ; Set Stack Pointer to BASE
     mov es, ax                  ; Zero out Extra Segment register
     mov ds, ax                  ; Zero out Data Segment register
+
+    mov [drive_number], dl
 
 ;********************************************************************;
 ;*                  Copy MBR to DEST and jump there                 *;
@@ -42,9 +59,14 @@
     cld                         ; clear Direction Flag (move forward)
     rep movsb                   ; Repeat MOVSB instruction for CX times
 
+    ; Invalidate the buffer by putting bad opcode in it
+    ;mov  word [BASE], 0x0B0F
+
     push ax                     ; Push continuation address to stack
     push SKIP + DEST            ;  to jump to SKIP in the copied code
     retf                        ; jump to copied code skipping part above
+
+align 4
 
 SKIP: EQU ($ - $$)              ; Go here in copied code
 
@@ -53,10 +75,18 @@ SKIP: EQU ($ - $$)              ; Go here in copied code
 ;********************************************************************;
 
     sti                         ; enable interrupts
+
+    ;mov     si, sign_on
+    ;call    print_string_16
+
+    ;mov     al, [drive_number]
+    ;call    print_num_16
+
     mov cx, ENTRY_NUM           ; Maximum of four entries as loop counter
     mov bp, TABLE_OFFSET + DEST ; Location of first entry in the table
 
-find_active:                    ; / loop
+find_active:
+
     cmp byte [bp], 0            ; Subtract 0 from first byte of entry at
                                 ; SS:[BP]. Anything from 80h to FFh has 1
                                 ; in highest bit (Sign Flag will be set)
@@ -67,10 +97,12 @@ find_active:                    ; / loop
 
     add bp, ENTRY_SIZE          ; Switch to the next partition entry
     loop find_active            ; Check next entry unless CL = 0
-                                ; \ loop
 
-    int 0x18                    ; Start ROM-BASIC or display an error
+    mov     si, invalid_error
+    call    print_string_16
 
+    ;int 0x18                    ; Start ROM-BASIC or display an error
+    jmp halt
 
 boot_partition:                 ; Boot from selected partition
                                 ; bp holds the entry pointer
@@ -79,41 +111,46 @@ boot_partition:                 ; Boot from selected partition
 ;*              Select the way of working with the disk             *;
 ;********************************************************************;
 
-    mov [bp], dl                ; dl is already set to 80h by BIOS,
-                                ; used as disk number (first HDD = 80h)
-    push bp                     ; save Base Pointer on Stack
-    mov byte [bp+0x11], 5       ; Number of attempts of reading the disk
-    mov byte [bp+0x10], 0       ; Used as a flag for the INT13 Extensions
+; This needed to updated, as the virtual systems do not implement
+; this check, as it is assumed the the ah=0x42 is present.
+; In 2020 this is a reasonable assumption
 
-    mov ah, 0x41                ;/ INT13h BIOS Extensions check
-    mov bx, 0x55aa              ;| AH = 41h, BX = 55AAh, DL = 80h
-    int 0x13                    ;| if CF flag cleared and [BX] changes to
-                                ;| aa55h, they are installed
-                                ;| major version is in AH: 01h=1.x;
-                                ;| 20h=2.0/edd-1.0; 21h=2.1/edd-1.1;
-                                ;| 30h=EDD-3.0.
-                                ;| CX = API subset support bitmap.
-                                ;| If bit 0 is set, extended disk access
-                                ;| functions (AH=42h-44h,47h,48h) are
-                                ;| supported. Only if no extended support
-                                ;\ is available, will it fail TEST
+    jmp int13_extended           ; all the hard work ... going around
 
-    pop bp                      ; Get back original Base Pointer.
-    jb no_int13                 ; Below? If so, CF=1 (not cleared)
-                                ;   so no INT 13 Ext. & do jump!
-    cmp bx, 0xaa55              ; Did contents of BX change?  If
-    jnz no_int13                ;   not, jump to offset 0659.
-    test cx, 0001               ; Final test for INT 13 Extensions!
-                                ; if bit 0 not set, this will fail,
-    jz no_int13                 ;   then we jump over next line...
-    inc byte [bp+0x10]          ; or increase [BP+10h] by one.
-
-no_int13:
-    pushad                      ; Save all 32-bit Registers on the stack
-                                ; (EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI)
-
-    cmp byte [bp+0x10], 00      ; Compare [BP+0x10] to zero;
-    jz int13_basic              ; If 0, can't use Extensions
+                                 ; used as disk number (first HDD = 80h)
+    ;push bp                     ; save Base Pointer on Stack
+    ;mov byte [bp+0x11], 5       ; Number of attempts of reading the disk
+    ;mov byte [bp+0x10], 0       ; Used as a flag for the INT13 Extensions
+    ;
+    ;mov ah, 0x41                ;/ INT13h BIOS Extensions check
+    ;mov bx, 0x55aa              ;| AH = 41h, BX = 55AAh, DL = 80h
+    ;int 0x13                    ;| if CF flag cleared and [BX] changes to
+    ;                            ;| aa55h, they are installed
+    ;                            ;| major version is in AH: 01h=1.x;
+    ;                            ;| 20h=2.0/edd-1.0; 21h=2.1/edd-1.1;
+    ;                            ;| 30h=EDD-3.0.
+    ;                            ;| CX = API subset support bitmap.
+    ;                            ;| If bit 0 is set, extended disk access
+    ;                            ;| functions (AH=42h-44h,47h,48h) are
+    ;                            ;| supported. Only if no extended support
+    ;                            ;\ is available, will it fail TEST
+    ;
+    ;pop bp                      ; Get back original Base Pointer.
+    ;jb no_int13                 ; Below? If so, CF=1 (not cleared)
+    ;                            ;   so no INT 13 Ext. & do jump!
+    ;cmp bx, 0xaa55              ; Did contents of BX change?  If
+    ;jnz no_int13                ;   not, jump to offset 0659.
+    ;test cx, 0001               ; Final test for INT 13 Extensions!
+    ;                            ; if bit 0 not set, this will fail,
+    ;jz no_int13                 ;   then we jump over next line...
+    ;inc byte [bp+0x10]          ; or increase [BP+10h] by one.
+    ;
+    ;no_int13:
+    ;pushad                      ; Save all 32-bit Registers on the stack
+    ;                            ; (EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI)
+    ;
+    ;cmp byte [bp+0x10], 00      ; Compare [BP+0x10] to zero;
+    ;jz int13_basic              ; If 0, can't use Extensions
 
 ;********************************************************************;
 ;*                 Read VBR with INT13 Extended Read                *;
@@ -136,85 +173,117 @@ no_int13:
 ;   10h  QWORD   (EDD-3.0, optional) 64-bit flat address of transfer
 ;                buffer; only used if DWORD at 04h is FFFF:FFFF
 
+int13_extended:
 
-    push strict dword 0x0       ; Push 4 zero-bytes (32-bits) onto
-                                ; stack to pad VBR's Starting Sector
-    push strict dword [BP+0x08] ; Location of VBR Sector
-    push strict 0x0             ; \ Segment then Offset parts, so:
-    push strict 0x7c00          ; / Copy Sector to 0x7c00 in Memory
-    push strict 0x0001          ;   Copy only 1 sector
-    push strict 0x0010          ; Reserved and Packet Size (16 bytes)
+    mov     si, booting - SHIFT_MEM
+    call    print_string_16
 
-    mov ah, 0x42                ; Function 42h
-    mov dl, [bp]                ; Drive Number
-    mov si, sp                  ; DS:SI must point to Disk Address Packet
-    int 0x13                    ; Try to get VBR Sector from disk
+    ;push strict dword 0x0       ; Push 4 zero-bytes (32-bits) onto
+                                 ; stack to pad VBR's Starting Sector
+    mov     eax,  [BP+0x08]
+    mov     [DAP + 0x08], eax
 
-; If successful, CF is cleared (0) and AH set to 00h.
-; If any errors, CF is set to 1    and AH = error code. In either case,
-; DAP's block count field is set to number of blocks actually transferred
+    ; Dump DAP
+    ;mov     si, DAP
+    ;add     si, 8
+    ;mov     cx, 16
+    ;call    dump_mem
 
-    lahf                        ; load Status flags into AH.
-    add sp, 0x10                ; Effectively removes all the DAP bytes
-                                ; from Stack by changing Stack Pointer.
-    sahf                        ; save AH into flags register, so we do
-                                ;  not change Status flags by doing so!
-    jmp read_sector
+    ; Copy it over
+    mov     dl, [drive_number]
+    mov     [drive_number - SHIFT_MEM], dl
 
-; The MBR uses the standard INT 13 "Read Sectors" function here, because
-; no INT 13 Extended functions were found in the BIOS code above:
+    ; Show drive number
+    ;mov     si, drive_number - SHIFT_MEM
+    ;mov     cx, 1
+    ;call    dump_mem
 
-int13_basic:
-    mov ax, 0x0201              ; Function 02h, read only 1 sector.
-    mov bx, 0x7c00              ; Buffer for read starts at 7C00.
-    mov dl, [bp+00]             ; DL = Disk Drive
-    mov dh, [bp+01]             ; DH = Head number (never use FFh).
-    mov cl, [bp+02]             ; Bits 0-5 of CL (max. value 3Fh)
-                                ; make up the Sector number.
-    mov ch, [bp+03]             ; Bits 6-7 of CL become highest two
-                                ; bits (8-9) with bits 0-7 of CH to
-                                ; make Cylinder number (max. 3FFh).
-    int 0x13                    ; INT13, Function 02h: READ SECTORS
-                                ; into Memory at ES:BX (0000:7C00).
+    mov     ah, 0x42                ; Function 42h
+    mov     dl, [drive_number]
+    mov     si, DAP
+    int     0x13                    ; Try to get VBR Sector from disk
 
-;The following code is missing some comments, but all the
-; instructions are here for you to study.
+    ; If successful, CF is cleared (0) and AH set to 00h.
+    jnc     jump_final
 
-; Whether Extensions are installed or not, both routines end up here:
+    ; If any errors, CF is set to 1    and AH = error code. In either case,
+    ; DAP's block count field is set to number of blocks actually transferred
 
-read_sector:
-    popad                       ; restore all 32-bit Registers from
-                                ; the stack, which we saved at 0659.
-    jnb label1
-    dec BYTE [BP+0x11]          ; Begins with 05h from 0638.
-    jnz label2                  ; If 0, tried 5 times to read
-                                ; VBR Sector from disk drive.
-    cmp byte [bp+00],0x80
-    jz print_loading            ;  -> "Error loading
-                                                                                                                    ;   operating system"
-    mov    dl, 0x80
-    jmp    boot_partition
+    push    ax
+    mov     si, newline - SHIFT_MEM
+    call    print_string_16
 
-label2:
-    push bp
-    xor AH, AH
-    mov dl, [bp+00]
-    int 0x13
+    mov     si, loading_error - SHIFT_MEM
+    call    print_string_16
+    pop     ax
 
-    pop bp
-    jmp no_int13
+    mov     al, ah
+    call    print_num_16
 
-label1:
-    cmp word [0x7dfe], 0xAA55
-    jnz print_missing           ; If we don't see it, Error!
-                                ; -> "missing operating system"
-    push word [bp]              ; Popped into DL again at 0727
-                                ; (contains 80h if 1st drive).
+    mov     si, space  - SHIFT_MEM
+    call    print_string_16
 
+    mov     al, [drive_number]
+    call    print_num_16
+
+    jmp     halt
+
+jump_final:
+
+    cmp     word [BASE + SIZE -2], 0xaa55
+    je      final_go
+
+    mov     si, nosig - SHIFT_MEM
+    call    print_string_16
+
+    jmp     halt
+
+final_go:
+
+    mov     si, final - SHIFT_MEM
+    call    print_string_16
+
+    mov     dl, [drive_number - SHIFT_MEM]
+
+    ;mov     dl, 0x80
+    ;mov     al,dl
+    ;call    print_num_16 - SHIFT_MEM
+
+    ;xor     ax,ax
+    ;push    ax                 ; Push continuation address to stack
+    ;push    BASE               ;  to jump to the loaded code
+    ;retf                       ; jump to copied code skipping part above
+
+    jmp 0x0000:0x7c00           ; Jump to Volume Boot Record code
+                                ; loaded into Memory by this MBR.
+
+
+    ;int 0x18              ; Is this instruction here to meet some specification of TPM v 1.2 ?
+    ;                      ; The usual 'INT18 if no disk found' is in the code above at 0632.
+
+
+
+; ------------------------------------------------------------------------
+; si to point to memory, cx number of bytes to dump
+
+dump_mem:
+
+    ;mov      al, [si]
+    ;inc      si
+    lodsb
+    call     print_num_16
+    push     si
+    mov      si, space
+    call     print_string_16
+    pop si
+    loop     dump_mem
+    ret
 
 ;********************************************************************;
 ;*          Trusted Platform Module support (hardcoded here)        *;
 ;********************************************************************;
+
+; deleted Sun 30.Jan.2022
 
 ;; =====================================================================
 ;;   All of the code from 06C6 through 0726 is related to discovering if
@@ -297,28 +366,19 @@ label1:
 ;;            "(EDX) = Event number of the event that was logged".
 ;; =====================================================================
 
-
-DB 0xE8, 0x8D, 0x00, 0x75, 0x17, 0xFA, 0xB0, 0xD1, 0xE6, 0x64, 0xE8, 0x83
-DB 0x00, 0xB0, 0xDF, 0xE6, 0x60, 0xE8, 0x7C, 0x00, 0xB0, 0xFF, 0xE6, 0x64
-DB 0xE8, 0x75, 0x00, 0xFB, 0xB8, 0x00, 0xBB, 0xCD, 0x1A, 0x66, 0x23, 0xC0
-DB 0x75, 0x3B, 0x66, 0x81, 0xFB, 0x54, 0x43, 0x50, 0x41, 0x75, 0x32, 0x81, 0xF9
-DB 0x02, 0x01, 0x72, 0x2C, 0x66, 0x68, 0x07, 0xBB, 0x00, 0x00, 0x66, 0x68
-DB 0x00, 0x02, 0x00, 0x00, 0x66, 0x68, 0x08, 0x00, 0x00, 0x00, 0x66, 0x53
-DB 0x66, 0x53, 0x66, 0x55, 0x66, 0x68, 0x00, 0x00, 0x00, 0x00, 0x66, 0x68
-DB 0x00, 0x7C, 0x00, 0x00, 0x66, 0x61, 0x68, 0x00, 0x00, 0x07, 0xCD, 0x1A
+;DB 0xE8, 0x8D, 0x00, 0x75, 0x17, 0xFA, 0xB0, 0xD1, 0xE6, 0x64, 0xE8, 0x83
+;DB 0x00, 0xB0, 0xDF, 0xE6, 0x60, 0xE8, 0x7C, 0x00, 0xB0, 0xFF, 0xE6, 0x64
+;DB 0xE8, 0x75, 0x00, 0xFB, 0xB8, 0x00, 0xBB, 0xCD, 0x1A, 0x66, 0x23, 0xC0
+;DB 0x75, 0x3B, 0x66, 0x81, 0xFB, 0x54, 0x43, 0x50, 0x41, 0x75, 0x32, 0x81, 0xF9
+;DB 0x02, 0x01, 0x72, 0x2C, 0x66, 0x68, 0x07, 0xBB, 0x00, 0x00, 0x66, 0x68
+;DB 0x00, 0x02, 0x00, 0x00, 0x66, 0x68, 0x08, 0x00, 0x00, 0x00, 0x66, 0x53
+;DB 0x66, 0x53, 0x66, 0x55, 0x66, 0x68, 0x00, 0x00, 0x00, 0x00, 0x66, 0x68
+;DB 0x00, 0x7C, 0x00, 0x00, 0x66, 0x61, 0x68, 0x00, 0x00, 0x07, 0xCD, 0x1A
 
 
 ;********************************************************************;
 ;*                        Jump to loaded VBR                        *;
 ;********************************************************************;
-
-    pop dx          ; From [BP+00] at 06C3; often 80h.
-    xor dh, dh       ; (Only DL matters)
-    jmp 0x0000:0x7c00   ; Jump to Volume Boot Record code
-                                           ; loaded into Memory by this MBR.
-
-    int 0x18              ; Is this instruction here to meet some specification of TPM v 1.2 ?
-                          ; The usual 'INT18 if no disk found' is in the code above at 0632.
 
 ;********************************************************************;
 ;*                   Print errors by jumping here                   *;
@@ -329,23 +389,39 @@ DB 0x00, 0x7C, 0x00, 0x00, 0x66, 0x61, 0x68, 0x00, 0x00, 0x07, 0xCD, 0x1A
 ; a never ending loop! You must reboot the machine.  INT 10, Function 0Eh
 ; (Teletype Output) is used to display each character of these error messages.
 
-print_missing:
-    mov     al, [DEST + 0x1B7]  ; ([7B7] -> 9A) + 700 = 79A h
-    jmp print_error             ; Displays: "Missing operating system"
-print_loading:
-    mov     al, [DEST + 0x1B6]  ; ([7B6] -> 7B) + 700 = 77B h
-    jmp print_error             ; Displays: "Error loading operating system"
+;print_missing:
+;    mov si, missing_error
+;    jmp print_error
+;
+;print_loading:
+;    mov si,  loading_error
+;    jmp print_error
+;
 print_partition:
-    mov     al, [DEST + 0x1B5]  ; ([7B5] -> 63) + 700 = 763 h
-                                ; which will display: "Invalid partition table"
+    mov si,  invalid_error
+    jmp print_error
+
+;********************************************************************;
+;*                  Subroutine that prints text                     *;
+;********************************************************************;
+
+;print_str:
+;    lodsb                   ; Load character into AL from [SI]
+;    cmp al, 0               ; Check for end of string
+;    je  .end_print
+;    mov ah, 0x0e            ; Character print function
+;    int 0x10                ;
+;    jmp print_str
+;  .end_print:
+;    ret
 
 ;********************************************************************;
 ;*               Subroutine that prints an error text               *;
 ;********************************************************************;
 
 print_error:
-    xor ah, ah              ; Zero-out AH
-    add ax, DEST + 0x100    ; Add 0x700 to offset passed in AL
+    ;xor ah, ah              ; Zero-out AH
+    ;add ax, DEST + 0x100    ; Add 0x700 to offset passed in AL
     mov si, ax              ; Put string offset to SI register
 
     print_character:
@@ -361,37 +437,111 @@ halt:
     hlt
     jmp halt
 
+; ------------------------------------------------------------------------
+
+print_char_16:              ; Output char in al
+    mov ah,0xe
+    int 0x10                ; Output the character
+    ret
+
+;------------------------------------------------------------------------------
+
+print_num_16:               ; Output value in al
+
+    push    ax
+
+    shr al, 4
+    and al, 0xf
+
+    cmp al, 9
+    jg  .hexx
+    add al, '0'
+    jmp .put
+  .hexx:
+    add al, 'A' - 10
+  .put:
+    mov ah,0xe
+    int 0x10                ; Output the character
+    pop ax
+
+    and al, 0xf
+    cmp al, 9
+    jg  .hexx2
+    add al, '0'
+    jmp .put2
+  .hexx2:
+    add al, 'A' - 10
+  .put2:
+    mov ah,0xe
+    int 0x10                ; Output the character
+    ret
+
+;------------------------------------------------------------------------------
+; 16-bit function to output a string to the serial port
+; IN:    SI - Address of start of string
+print_string_16:            ; Output string in SI to screen
+    pusha
+    mov bx, 0
+    mov dx, 0                ; Port 0
+ .repeat:
+    mov ah, 0x01            ; Serial - Write character to port
+    lodsb                    ; Get char from string
+    cmp al, 0
+    je .done                ; If char is zero, end of string
+    int 0x14                ; Output the character
+    mov ah,0xe
+    int 0x10                ; Output the character
+    jmp short .repeat
+ .done:
+    popa
+    ret
+
+;------------------------------------------------------------------------------
+
 ;********************************************************************;
 ;*              Subroutine of A20 line enablement code              *;
 ;********************************************************************;
 
 ; This routine checks/waits for access to KB controller
+;
+;a20_check_wait:
+;    sub cx, cx                  ; Sets CX = 0  NASM USES ANOTHER INSTRUCTION
+;    check_something:
+;        in al, 0x64             ; Check port 64h
+;        jmp unused_jump         ; Seems odd, but this is how it's done
+;        unused_jump:
+;        and al, 2                    ; Test for only 'Bit 1' *not* set
+;        loopne check_something       ; Continue to check (loop) until
+;                                     ; cx = 0 (and ZF=1); it's ready
+;    and al, 2
+;    ret
 
-a20_check_wait:
-    sub cx, cx                  ; Sets CX = 0                         NASM USES ANOTHER INSTRUCTION
-    check_something:
-        in al, 0x64             ; Check port 64h
-        jmp unused_jump         ; Seems odd, but this is how it's done
-        unused_jump:
-        and al, 2                    ; Test for only 'Bit 1' *not* set
-        loopne check_something       ; Continue to check (loop) until
-                                     ; cx = 0 (and ZF=1); it's ready
-    and al, 2
-    ret
+nosig           db  'No AA55 sig', 10, 13, 0
+final           db  'JMP to OS ', 10, 13, 0
+;sign_on        db  'Starting boot sector'
+newline         db  10, 13, 0
+booting         db  'Booting ... ', 0
+space           db  ' ', 0
+drive_number:   db  0
 
 ;********************************************************************;
 ;*                          Error messages                          *;
 ;********************************************************************;
 
-INVALID_ERROR_OFFSET: EQU ($ - $$) % 0x100
-INVALID_ERROR: DB "Invalid partition table", 0
-LOADING_ERROR_OFFSET: EQU ($ - $$) % 0x100
-LOADING_ERROR: DB "Error loading operating system", 0
-MISSING_ERROR_OFFSET: EQU ($ - $$) % 0x100
-MISSING_ERROR: DB "Missing operating system", 0
+;invalid_error: DB "No patitions.", 10, 13,  0
+invalid_error: DB "MBR No bootable patitions found.", 10, 13,  0
+loading_error: DB "MBR Error on disk read. ", 10, 13, 0
+missing_error: DB "MBR No operating system found. ", 10, 13, 0
+
+DAP:
+    db 0x10             ; 0
+    db 0x00             ; 1
+    dw DAP_SECTORS      ; 2
+    dw DAP_ADDRESS      ; 4
+    dw DAP_SEGMENT      ; 6
+    dq DAP_STARTSECTOR  ; 8
 
 DW 0x0000
-DB INVALID_ERROR_OFFSET, LOADING_ERROR_OFFSET, MISSING_ERROR_OFFSET
 DD DISK_ID
 DW 0x0000
 
@@ -401,10 +551,21 @@ DW 0x0000
 
 TABLE_SIZE: EQU (ENTRY_NUM * ENTRY_SIZE)    ; Should be 4*16 = 64
 TABLE_OFFSET: EQU (SIZE - TABLE_SIZE - 2)   ; Should be 512-64-2 = 446
-TIMES TABLE_OFFSET - ($ - $$) DB 0xCC       ; Fill up to 446 bytes
+
+padd:
+
+TIMES TABLE_OFFSET - ($ - $$) DB 0x90       ; Fill up to 446 bytes with 'nop'
+
+endd:
+
+%assign num endd-padd
+%warning "padding available" num
 
 TIMES TABLE_SIZE DB 0x00    ; Fill partition table with 0x00
 
 ; End of file
 
-DB 0x55, 0xAA               ; Mark sector as bootable
+DB  0x55, 0xAA               ; Mark sector as bootable
+
+; EOF
+
